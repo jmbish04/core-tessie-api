@@ -1,0 +1,14 @@
+name = "core-tessie-worker"
+main = "src/main.py"
+compatibility_date = "2024-05-12"
+compatibility_flags = ["python_workers"]
+workers_dev = false
+
+[build]
+command = "pip install -r requirements.txt"
+
+[[env.production.secrets]]
+name = "TESSIE_API_KEY"
+
+[[env.production.secrets]]
+name = "JWT_SECRET"
