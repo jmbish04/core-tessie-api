@@ -70,3 +70,4 @@ from .literals import (
     Seat,
     ClimateKeeperMode,
 )
+from .jwt_utils import generate_worker_jwt

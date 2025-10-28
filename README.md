@@ -42,6 +42,47 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### Generating JWT tokens for the Cloudflare Worker
+The Cloudflare Worker included in this repository expects incoming requests to provide a bearer token signed with the shared secret defined in the `JWT_SECRET` environment variable. Configure the secret in Wrangler with `wrangler secret put JWT_SECRET`, then choose one of the following approaches to create tokens during development:
+
+#### 1. Use the built-in helper module
+Run the helper directly with Python (it will automatically read `JWT_SECRET` if it is set):
+
+```bash
+python -m tessie_api.jwt_utils --subject my-service --expires-in 900
+```
+
+You can override or extend claims by passing `--claim KEY=VALUE` flags. Values are parsed as JSON whenever possible, so strings must be quoted (for example, `--claim roles='["admin"]'`).
+
+#### 2. Manually create a token with PyJWT
+If you prefer to generate tokens by hand, `PyJWT` is included in the dependencies:
+
+```bash
+python - <<'PY'
+import datetime as dt
+import jwt
+
+secret = "your-shared-secret"  # must match the JWT_SECRET configured in the worker
+payload = {
+    "sub": "my-service",           # subject identifier for the caller
+    "iat": dt.datetime.utcnow(),    # issued-at timestamp
+    "exp": dt.datetime.utcnow() + dt.timedelta(minutes=30),  # expiry time
+}
+
+token = jwt.encode(payload, secret, algorithm="HS256")
+print(token)
+PY
+```
+
+Use the printed token as a bearer token when calling the worker:
+
+```bash
+curl -H "Authorization: Bearer <token>" https://your-worker.workers.dev/status?vin=...
+```
+
+### Offline development helpers
+For local testing you can opt into deterministic fake Tessie API responses by setting `TESSIE_USE_FAKE_RESPONSES=1`. The fake responses honour the `TESLA_VIN` environment variable (defaulting to `TESTVIN1234567890`) so you can write assertions without contacting the real Tessie service.
+
 ## Tests
 ```bash
 pip install -e .

@@ -6,6 +6,13 @@ description = "A small python package that wraps up the Tessie API "
 readme = "README.md"
 requires-python = ">=3.5"
 exclude = ["*.env", "*.env.example", ".devcontainer/", ".vscode/", "tests/"]
+dependencies = [
+    "PyJWT==2.8.0",
+    "python-dotenv>=1.0.1",
+    "aiohttp>=3.9.5",
+    "pytz>=2025.1",
+    "pytest-asyncio>=0.23.8",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
