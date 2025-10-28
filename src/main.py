@@ -146,7 +146,8 @@ async def fetch(request, env, ctx):  # noqa: D401 - Cloudflare entry point
             result = await route_handler(session, tessie_key, params)
     except HTTPException as exc:
         return _error_response(exc)
-    except Exception:  # pragma: no cover - catch-all for worker stability
+    except Exception as e:  # pragma: no cover - catch-all for worker stability
+        print(f"An unexpected error occurred: {e}") # consider using a proper logger here
         return _json_response({"error": "Internal Server Error"}, status=500)
 
     return _json_response(result)
