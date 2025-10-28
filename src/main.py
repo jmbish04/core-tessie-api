@@ -68,7 +68,9 @@ async def _parse_request_data(request) -> Dict[str, Any]:
     if request.headers.get("Content-Type", "").startswith("application/json"):
         try:
             body = await request.json()
-        except Exception as exc:  # pragma: no cover - defensive
+        try:
+            body = await request.json()
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive
             raise HTTPException(400, "Invalid JSON body") from exc
         if not isinstance(body, dict):
             raise HTTPException(400, "JSON body must be an object")
