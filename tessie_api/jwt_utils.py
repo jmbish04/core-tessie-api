@@ -65,7 +65,7 @@ def main(argv: Iterable[str] | None = None) -> str:
     parser.add_argument(
         "--expires-in",
         type=int,
-        default=int(os.getenv("JWT_EXPIRES_IN", DEFAULT_EXPIRATION_SECONDS)),
+        default=int(os.getenv("JWT_EXPIRES_IN", str(DEFAULT_EXPIRATION_SECONDS))),
         help="Token lifetime in seconds (default: 1800).",
     )
     parser.add_argument(
