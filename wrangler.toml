@@ -56,3 +56,8 @@ SYNC_INTERVAL_HOURS = "4"
 # Runs every 4 hours (00, 04, 08, 12, 16, 20 UTC)
 [[triggers.crons]]
 schedule = "0 */4 * * *"
+
+
+[scripts]
+build = "python build.py"
+deploy = "python deploy.py"
