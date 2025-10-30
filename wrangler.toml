@@ -12,3 +12,24 @@ name = "TESSIE_API_KEY"
 
 [[env.production.secrets]]
 name = "JWT_SECRET"
+
+kv
+core-tessie-api
+eee506db5bfd4d87bfcb5fd947accc04
+
+d1
+core-tessie-api
+a8b120ac-9449-470a-b3e6-3730dc651542
+migrations_dir=migrations
+
+queue
+core-tessie-api
+
+r2 bucket
+core-tessie-api
+
+{
+  "analytics_engine_datasets": [
+    { "binding": "ANALYTICS_ENGINE", "dataset": "core-tessie-api" }
+  ]
+}
