@@ -20,24 +20,24 @@ binding = "AI"
 
 # 💾 KV Namespace
 [[kv_namespaces]]
-binding = "CORE_TESSIE_API"
+binding = "KV"
 id = "eee506db5bfd4d87bfcb5fd947accc04"
 
 # 🗄️ D1 Database
 [[d1_databases]]
-binding = "CORE_TESSIE_API_DB"
+binding = "DB"
 database_name = "core-tessie-api"
 database_id = "a8b120ac-9449-470a-b3e6-3730dc651542"
 migrations_dir = "migrations"
 
 # 📬 Queue
 [[queues.producers]]
-binding = "CORE_TESSIE_QUEUE"
+binding = "QUEUE"
 queue = "core-tessie-api"
 
 # ☁️ R2 Bucket
 [[r2_buckets]]
-binding = "CORE_TESSIE_R2"
+binding = "BUCKET"
 bucket_name = "core-tessie-api"
 
 # 📊 Analytics Engine Dataset
