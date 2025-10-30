@@ -1,3 +1,4 @@
+# 🌀 Wrangler Configuration for Core Tessie API Worker
 name = "core-tessie-worker"
 main = "src/main.py"
 compatibility_date = "2024-05-12"
@@ -5,31 +6,53 @@ compatibility_flags = ["python_workers"]
 workers_dev = false
 
 [build]
-command = "pip install -r requirements.txt"
+# Updated for Cloudflare Python Worker support
+command = "pip install -r cf-requirements.txt"
 
-[[env.production.secrets]]
-name = "TESSIE_API_KEY"
+# 🔐 Secrets
+# Define via: wrangler secret put TESSIE_API_KEY
+#             wrangler secret put JWT_SECRET
 
-[[env.production.secrets]]
-name = "JWT_SECRET"
+# 🧠 Workers AI Binding
+# Gives the Worker direct access to Cloudflare’s AI inference platform.
+[ai]
+binding = "AI"
 
-kv
-core-tessie-api
-eee506db5bfd4d87bfcb5fd947accc04
+# 💾 KV Namespace
+[[kv_namespaces]]
+binding = "CORE_TESSIE_API"
+id = "eee506db5bfd4d87bfcb5fd947accc04"
 
-d1
-core-tessie-api
-a8b120ac-9449-470a-b3e6-3730dc651542
-migrations_dir=migrations
+# 🗄️ D1 Database
+[[d1_databases]]
+binding = "CORE_TESSIE_API_DB"
+database_name = "core-tessie-api"
+database_id = "a8b120ac-9449-470a-b3e6-3730dc651542"
+migrations_dir = "migrations"
 
-queue
-core-tessie-api
+# 📬 Queue
+[[queues.producers]]
+binding = "CORE_TESSIE_QUEUE"
+queue = "core-tessie-api"
 
-r2 bucket
-core-tessie-api
+# ☁️ R2 Bucket
+[[r2_buckets]]
+binding = "CORE_TESSIE_R2"
+bucket_name = "core-tessie-api"
 
-{
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS_ENGINE", "dataset": "core-tessie-api" }
-  ]
-}
+# 📊 Analytics Engine Dataset
+[[analytics_engine_datasets]]
+binding = "ANALYTICS_ENGINE"
+dataset = "core-tessie-api"
+
+# 🤖 AI Reasoning Model
+[vars]
+# Default reasoning model used by AI agents / orchestrators
+DEFAULT_MODEL_REASONING = "@cf/openai/gpt-oss-120b"
+# Interval (in hours) between automated D1 syncs
+SYNC_INTERVAL_HOURS = "4"
+
+# 🕓 CRON trigger to automatically log Tessie API responses to D1
+# Runs every 4 hours (00, 04, 08, 12, 16, 20 UTC)
+[[triggers.crons]]
+schedule = "0 */4 * * *"
