@@ -1,9 +1,9 @@
 # 🌀 Wrangler Configuration for Core Tessie API Worker
-name = "core-tessie-worker"
+name = "core-tessie-api"
 main = "src/main.py"
 compatibility_date = "2024-05-12"
 compatibility_flags = ["python_workers"]
-workers_dev = false
+workers_dev = true
 
 [build]
 # Updated for Cloudflare Python Worker support
