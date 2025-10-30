@@ -1,443 +1,290 @@
-PROMPT — Build Modular FastAPI-Style Python Worker for Tessie + D1 + Agents
+PROMPT.md — Cloudflare FastAPI Modular Worker Scaffold
 
-You are an expert engineer working in Cloudflare Workers (Python runtime via Pyodide).
-Create a modular, production-ready codebase with FastAPI-style routing and Pydantic-like validation, but pin libraries compatible with Pyodide (no native extensions). If FastAPI v2/pydantic v2 cause issues, use FastAPI 0.95.x + Pydantic 1.10.x + Starlette 0.27.x.
+You are Claude Code / Codex, operating in the repo core-tessie-api.
+Use the official FastAPI support in Python Workers and the examples in cloudflare/python-workers-examples, adhering to the technical constraints from the Cloudflare documentation.
+Build a modular FastAPI application deployed as a Python Worker with the following requirements:
 
-High-Level Requirements
-	1.	Python Worker with a FastAPI-style app and modular routers:
-	•	/d1/* — CRUD, especially robust LIST with filter + pagination + sorting across all tables.
-	•	/agent/* — chat + actions backed by Workers AI, Queues, Durable Object (via JS companion if needed), Workflows. Expose invoke, status, events.
-	•	/tessieapi/* — raw Tessie API proxy (path-through, auth, rate-limit).
-	•	/colbycommands/* — curated commands (e.g., energy-report) with business logic.
-	•	/openapi.json and /openapi.yaml (generate schema dynamically).
-	•	/ws WebSocket endpoint for real-time agent/events; must include SSE fallback at /events if WebSockets are limited in Python Workers.
-	2.	Type validation / “ORM” layer using Pydantic v1 models (no compiled deps) for:
-	•	Car/Vehicle info to sync (vehicles, charges, drives, climate, software, etc.).
-	•	Request/response DTOs for Tessie proxy and ColbyCommands.
-	•	D1 row mappers.
-	3.	D1 schema + migrations:
-	•	Provide migrations/0001_init.sql that creates:
-	•	vehicles, vehicle_settings, charges, drives, climates, software_updates
-	•	tessie_raw (raw JSON per pull), sync_runs (each cron run),
-logs (verbose), energy_reports, agent_messages, agent_actions
-	•	All tables include id, created_at, updated_at; logs capture request_id, route, actor, level, message, payload.
-	4.	CORS support using CORS_ALLOWED_ORIGINS var; respond to OPTIONS and attach headers on all routes.
-	5.	Cron (every 4 hours) to pull Tessie state and persist to D1 (with row-level logs and a sync_runs record).
-	6.	Queues:
-	•	Producer for CORE_TESSIE_QUEUE on long-running/async tasks (e.g., bulk energy report).
-	•	Consumer handler (in this Python worker if possible; if not feasible, document a JS Consumer Worker and POST bridge).
-	7.	Workers AI:
-	•	Bind WORKERS_AI, expose /agent/chat that:
-	•	Streams tokens to /ws (or /events) and persists messages to agent_messages.
-	•	Supports tools/actions that enqueue tasks and write agent_actions.
-	8.	OpenAPI:
-	•	Ensure app.openapi() is correct.
-	•	Serve /openapi.json and /openapi.yaml (generate YAML from JSON at runtime).
-	9.	Logging:
-	•	Middleware to log every request and response (status, duration, user/subject, headers*, body*) into logs.
-	•	Add safeguards to avoid storing secrets; redact headers/body fields (Authorization, api_key, jwt, etc).
-	10.	Package pins (Pyodide-friendly) via cf-requirements.txt:
+📏 Technical Constraints (from Cloudflare Docs)
 
-fastapi==0.95.2
-starlette==0.27.0
-pydantic==1.10.13
-PyYAML==6.0.2
-PyJWT==2.8.0
-python-dotenv==1.0.1
-aiohttp==3.9.5
-pytz==2025.1
-pytest-asyncio==0.23.8
+Async Only: The runtime is single-threaded. Modules like threading, multiprocessing, and sockets are not functional. All I/O must be asynchronous.
+Package Management: Dependencies are managed by pywrangler via pyproject.toml, not cf-requirements.txt.
+HTTP Client: Outbound HTTP requests must use a supported async library, such as aiohttp or httpx.
+Environment Access: FastAPI endpoints access environment bindings (env) via the request.scope["env"] dictionary.
 
-If any import fails in Pyodide, provide a minimal Starlette-only fallback keeping the same public API.
+🧩 Core Goals
 
-⸻
+Provide a typed FastAPI API for:
+/d1/* CRUD + LIST endpoints (auto-filters, pagination, sort).
+/tessieapi/* proxy to Tessie endpoints.
+/colbycommands/* curated “well-lit” commands (energy report, etc).
+/agent/* chat + action interfaces (Cloudflare Agents SDK + Actors + Workflows + Queues).
+/openapi.json and /openapi.yaml.
+/ws (WebSocket) + /events (SSE fallback).
+Sync Tessie data to D1 every 4 hours (cron) and record verbose logs in D1 for full traceability.
+Support CORS, Workers AI binding, Queue producer, and Analytics Engine telemetry.
 
-Project Layout
-
-core-tessie-api/
-├─ wrangler.toml
-├─ cf-requirements.txt
-├─ migrations/
-│  └─ 0001_init.sql
-├─ src/
-│  ├─ main.py                 # Worker entry + CORS + cron + queue + websocket/SSE
-│  ├─ app.py                  # FastAPI app creation + OpenAPI wiring
-│  ├─ config.py               # env/vars (CORS_ALLOWED_ORIGINS, SYNC_INTERVAL_HOURS, etc.)
-│  ├─ d1/
-│  │  ├─ client.py            # thin D1 client (HTTP bridge if needed), helpers
-│  │  ├─ queries.py           # parameterized SQL for LIST/CRUD per table
-│  ├─ models/
-│  │  ├─ base.py              # Pydantic BaseModel settings (v1)
-│  │  ├─ vehicle.py           # Vehicle/Car models (Vehicle, Charge, Drive, Climate, SoftwareUpdate)
-│  │  ├─ log.py               # LogRow
-│  │  ├─ agent.py             # AgentMessage, AgentAction
-│  │  └─ tessie.py            # Tessie proxy DTOs
-│  ├─ routers/
-│  │  ├─ openapi.py           # /openapi.json, /openapi.yaml
-│  │  ├─ d1_ops.py            # /d1/<table> list/create/get/update/delete + filters
-│  │  ├─ agent_ops.py         # /agent/chat, /agent/actions, /agent/events
-│  │  ├─ tessie_proxy.py      # /tessieapi/* passthrough
-│  │  └─ colby_commands.py    # /colbycommands/energy-report etc.
-│  ├─ services/
-│  │  ├─ tessie.py            # auth, rate-limit, fetch/wrap
-│  │  ├─ energy.py            # energy report logic
-│  │  ├─ logging.py           # structured logging to D1
-│  │  ├─ cors.py              # helpers to attach CORS headers
-│  │  ├─ ai.py                # Workers AI invocations
-│  │  └─ queue.py             # producer/consumer handlers
-│  └─ ws/
-│     ├─ websocket.py         # /ws handler
-│     └─ sse.py               # /events fallback (Server-Sent Events)
-└─ tests/
-   └─ test_endpoints.py
+⚙️ Project Structure
 
 
-⸻
-
-Migrations — migrations/0001_init.sql
-
--- vehicles & settings
-CREATE TABLE IF NOT EXISTS vehicles (
-  id TEXT PRIMARY KEY,
-  vin TEXT UNIQUE NOT NULL,
-  display_name TEXT,
-  make TEXT,
-  model TEXT,
-  year INTEGER,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS vehicle_settings (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  key TEXT NOT NULL,
-  value TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(vehicle_id, key),
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
--- telemetry/state slices
-CREATE TABLE IF NOT EXISTS charges (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  battery_level INTEGER,
-  charge_rate REAL,
-  charging_state TEXT,
-  raw JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
-CREATE TABLE IF NOT EXISTS drives (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  odometer REAL,
-  latitude REAL,
-  longitude REAL,
-  speed REAL,
-  raw JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
-CREATE TABLE IF NOT EXISTS climates (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  interior_temp REAL,
-  exterior_temp REAL,
-  is_auto BOOLEAN,
-  raw JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
-CREATE TABLE IF NOT EXISTS software_updates (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  version TEXT,
-  status TEXT,
-  raw JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
--- raw pulls & sync runs
-CREATE TABLE IF NOT EXISTS tessie_raw (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT,
-  endpoint TEXT NOT NULL,
-  status INTEGER,
-  payload JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
-CREATE TABLE IF NOT EXISTS sync_runs (
-  id TEXT PRIMARY KEY,
-  started_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  finished_at TEXT,
-  status TEXT,
-  summary TEXT
-);
-
--- verbose logs (full traceability)
-CREATE TABLE IF NOT EXISTS logs (
-  id TEXT PRIMARY KEY,
-  level TEXT NOT NULL,
-  route TEXT,
-  request_id TEXT,
-  actor TEXT,
-  message TEXT,
-  payload JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
--- energy reports
-CREATE TABLE IF NOT EXISTS energy_reports (
-  id TEXT PRIMARY KEY,
-  vehicle_id TEXT NOT NULL,
-  period_start TEXT,
-  period_end TEXT,
-  summary JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
-);
-
--- agent I/O
-CREATE TABLE IF NOT EXISTS agent_messages (
-  id TEXT PRIMARY KEY,
-  role TEXT NOT NULL,         -- user|assistant|system|tool
-  content TEXT NOT NULL,
-  metadata JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS agent_actions (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  status TEXT NOT NULL,       -- queued|running|succeeded|failed
-  input JSON,
-  result JSON,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
 
 
-⸻
+src/
+ ├── main.py                # WorkerEntrypoint w/ FastAPI ASGI hook + cron handler
+ ├── app.py                 # FastAPI app factory, routers registration
+ ├── config.py              # env vars, defaults, CORS_ALLOWED_ORIGINS
+ ├── d1/
+ │    ├── client.py         # thin async D1 client using env.DB.prepare().run()
+ │    └── queries.py        # reusable SQL statements
+ ├── models/
+ │    ├── vehicle.py        # Vehicle, Charge, Drive, Climate, Software schemas
+ │    ├── log.py            # LogRow
+ │    ├── agent.py          # AgentMessage, AgentAction
+ │    └── tessie.py         # Tessie DTOs
+ ├── routers/
+ │    ├── d1_ops.py
+ │    ├── tessie_proxy.py
+ │    ├── colby_commands.py
+ │    ├── agent_ops.py
+ │    └── openapi.py
+ ├── services/
+ │    ├── tessie.py         # proxy + auth + rate-limit (using aiohttp)
+ │    ├── energy.py         # custom report logic
+ │    ├── ai.py             # Workers AI chat/completion helpers
+ │    ├── logging.py        # D1 logging middleware
+ │    ├── queue.py          # send / receive handlers
+ │    └── cors.py           # CORS injection helpers
+ └── ws/
+      ├── websocket.py
+      └── sse.py
+migrations/
+ └── 0001_init.sql
+pyproject.toml
+wrangler.toml
 
-Implementation Notes & Constraints
-	•	ASGI on Workers Python: If full FastAPI can’t boot in Pyodide, deliver a Starlette app with identical routes and DTOs. Keep the same public contract.
-	•	Websocket: If native WS is not available, implement SSE at /events and a thin WS shim (document limitations).
-	•	D1 Client: Expose a d1.client with helpers:
-	•	execute(sql, params) returning rows, meta
-	•	list(table, filters: dict, limit, offset, sort) with whitelist of tables/columns to avoid SQL injection.
-	•	OpenAPI:
-	•	GET /openapi.json → return app.openapi()
-	•	GET /openapi.yaml → JSON→YAML with PyYAML.safe_dump
-	•	CORS:
-	•	Read CORS_ALLOWED_ORIGINS.
-	•	Respond to OPTIONS with Access-Control-* headers.
-	•	Attach CORS headers on all responses.
 
-⸻
 
-Endpoints (Required)
+🗃️ migrations/0001_init.sql
 
-D1 Operations — /d1/*
-	•	GET /d1/{table}/list?filter[k]=v&sort=field,-field2&limit=50&offset=0
-	•	GET /d1/{table}/{id}
-	•	POST /d1/{table} (create)
-	•	PATCH /d1/{table}/{id}
-	•	DELETE /d1/{table}/{id}
+Create these tables:
+vehicles, vehicle_settings, charges, drives, climates, software_updates
+tessie_raw, sync_runs, energy_reports
+logs (verbose log storage)
+agent_messages, agent_actions
+Each table: id TEXT PRIMARY KEY, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP.
+logs must include route, actor, request_id, level, message, payload JSON.
 
-Tessie Proxy — /tessieapi/*
-	•	Mirror Tessie REST surface. Example:
-	•	POST /tessieapi/{vin}/command/{name}
-	•	GET /tessieapi/{vin}/state/{slice}
-	•	Inject Tessie auth from secret; log to tessie_raw and logs.
+🧠 Agent / AI Integration
 
-ColbyCommands — /colbycommands/*
-	•	POST /colbycommands/energy-report
-Input: { vin, range: {start, end} }
-Output: computed report + row in energy_reports.
+Bind WORKERS_AI (use env.WORKERS_AI.run(model, input)).
+Expose /agent/chat → streams tokens to /ws or /events, logs to agent_messages.
+/agent/actions → enqueue into CORE_TESSIE_QUEUE and log to agent_actions.
+Use Cloudflare Agents SDK + Actors + Workflows if available in the environment.
 
-Agent Ops — /agent/*
-	•	POST /agent/chat → streams via /ws or /events and writes to agent_messages.
-	•	POST /agent/actions → enqueues long tasks to Queues (CORE_TESSIE_QUEUE), row in agent_actions.
-	•	GET /agent/actions/{id} → status/result.
+🔁 Tessie Proxy
 
-OpenAPI
-	•	GET /openapi.json
-	•	GET /openapi.yaml
+/tessieapi/{vin}/{path:path} mirrors Tessie REST.
+Implement all outbound requests using the aiohttp client, as it is supported in the Python Workers runtime.
+Inject TESSIE_API_KEY from env.
+Store raw responses into tessie_raw and logs.
 
-Realtime
-	•	GET /ws (WebSocket) with SSE fallback at GET /events.
+⚡ ColbyCommands
 
-Health
-	•	GET /healthz → { ok: true, time, version }
+/colbycommands/energy-report — summarize Tessie telemetry and persist to energy_reports.
+Extendable /colbycommands/* for other curated routines.
 
-⸻
+🔄 Cron Handler
 
-Cron & Sync
-	•	Register a cron handler (every 4 hours) that:
-	•	Starts a sync_runs row.
-	•	Pulls Tessie states for all vehicles.
-	•	Writes normalized slices (charges, drives, climates, software_updates) and raw responses to tessie_raw.
-	•	Writes verbose logs at each step.
-	•	Marks sync_runs.status = succeeded|failed.
+Every 4 hours (0 */4 * * *):
+Log sync_runs start.
+Pull all vehicles from D1.
+Fetch Tessie data, insert normalized rows, append to tessie_raw + logs.
+Summarize → sync_runs.status = "succeeded".
 
-⸻
+🌐 CORS / OpenAPI / WebSocket
 
-Queues
-	•	Producer: In /agent/actions and /colbycommands/energy-report when work > threshold.
-	•	Consumer: Provide a Python handler; if Python Workers cannot consume directly, document and generate a JS consumer worker (Durable Object/Actor/Workflow friendly) receiving messages and calling back into Python API.
+Use CORS_ALLOWED_ORIGINS env.
+Implement OPTIONS preflights and append headers to all responses.
+Serve /openapi.json and /openapi.yaml using app.openapi() + PyYAML.
+/ws for live events; /events as SSE fallback.
 
-⸻
+📦 Packaging (pyproject.toml)
 
-Workers AI
-	•	Use the WORKERS_AI binding to:
-	•	Summarize sync runs.
-	•	Provide agent chat completions (stream to WS/SSE).
-	•	Store every prompt/response in agent_messages.
+Use this pyproject.toml to manage dependencies via pywrangler.
 
-⸻
+Ini, TOML
 
-Code Stubs (Minimal)
 
-src/app.py
+[project]
+name = "core-tessie-api"
+version = "0.1.0"
+description = "FastAPI-based Python Worker for Tessie data and AI agents."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.109.0",
+    "starlette==0.37.2",
+    "pydantic==1.10.13",
+    "PyYAML==6.0.2",
+    "PyJWT==2.8.0",
+    "python-dotenv==1.0.1",
+    "aiohttp==3.9.5",
+    "pytz==2025.1",
+    "pytest-asyncio==0.23.8"
+]
 
-from fastapi import FastAPI
-from routers import openapi as r_openapi, d1_ops, tessie_proxy, colby_commands, agent_ops
+[dependency-groups]
+dev = ["workers-py"]
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="Core Tessie API", version="0.1.0")
-    app.include_router(r_openapi.router)
-    app.include_router(d1_ops.router, prefix="/d1", tags=["d1"])
-    app.include_router(tessie_proxy.router, prefix="/tessieapi", tags=["tessie"])
-    app.include_router(colby_commands.router, prefix="/colbycommands", tags=["colby"])
-    app.include_router(agent_ops.router, prefix="/agent", tags=["agent"])
-    return app
 
+
+⚙️ Configuration (wrangler.toml)
+
+Generate this wrangler.toml to define bindings, crons, and queues.
+
+Ini, TOML
+
+
+name = "core-tessie-api"
+main = "src/main.py:Default"
+compatibility_date = "2025-10-30"
+compatibility_flags = ["python_workers"]
+
+# Cron trigger for the 4-hour sync
+[triggers]
+crons = ["0 */4 * * *"]
+
+# Environment variable bindings (for FastAPI)
+[vars]
+CORS_ALLOWED_ORIGINS = "http://localhost:3000,https://your-prod-domain.com"
+
+# Secrets (for WorkerEntrypoint)
+# npx wrangler secret put TESSIE_API_KEY
+# npx wrangler secret put JWT_SECRET_KEY
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "tessie-db"
+database_id = "<your-d1-db-id>"
+
+# Workers AI binding
+[ai]
+binding = "WORKERS_AI"
+
+# Queue producer binding
+[[queues.producers]]
+queue = "core-tessie-queue"
+binding = "CORE_TESSIE_QUEUE"
+
+# Queue consumer (if this worker also consumes)
+[[queues.consumers]]
+queue = "core-tessie-queue"
+
+
+
+🧠 Implementation Pattern (WorkerEntrypoint)
+
+Use this pattern in src/main.py to bridge the Worker runtime to the FastAPI app.
+
+Python
+
+
+from workers import WorkerEntrypoint
+from fastapi import FastAPI, Request
+from js import console
+import asgi
+
+from src.app import create_app
+from src.services.logging import log_request
+from src.services.sync import run_sync
+
+# Create the FastAPI app instance
 app = create_app()
 
-src/routers/openapi.py
+class Default(WorkerEntrypoint):
+    """
+    WorkerEntrypoint bridges Cloudflare's runtime with the FastAPI
+    ASGI application. It handles 'fetch' (HTTP) and 'queue' events.
+    The 'env' (self.env) is passed to asgi.fetch, making it
+    available in FastAPI via request.scope["env"].
+    """
 
-from fastapi import APIRouter, Response
-import yaml
-from src.app import create_app
+    async def fetch(self, request, env):
+        """
+        Handles incoming HTTP requests.
+        Detects 'cf-cron' header for scheduled tasks.
+        Passes all other requests to the FastAPI app.
+        """
+        # Detect cron-triggered fetches
+        if request.headers.get("cf-cron", ""):
+            console.log("Cron triggered: running sync")
+            await run_sync(env)
+            return Response.json({"status": "sync complete"})
+        
+        try:
+            # Pass the request, and *critically* the env, to the ASGI app
+            response = await asgi.fetch(app, request, env)
+        except Exception as e:
+            # Catch-all for ASGI app errors
+            console.error(f"ASGI app error: {e}")
+            response = Response.json({"error": str(e)}, status=500)
 
-router = APIRouter()
+        # Log the request/response pair to D1
+        try:
+            await log_request(request, response, env)
+        except Exception as log_e:
+            # Failsafe: don't block the response if logging fails
+            console.error(f"Failed to log request: {log_e}")
+            
+        return response
 
-@router.get("/openapi.json")
-def openapi_json():
-    return create_app().openapi()
+    async def queue(self, batch, env):
+        """
+        Handles messages from the CORE_TESSIE_QUEUE.
+        """
+        for msg in batch.messages:
+            console.log(f"Queue message received: {msg.id}")
+            # Add your queue processing logic from services/queue.py here
+            # e.g., await handle_queue_message(msg, env)
+            msg.ack()
 
-@router.get("/openapi.yaml", response_class=Response, responses={200: {"content": {"application/yaml": {}}}})
-def openapi_yaml():
-    spec = create_app().openapi()
-    return Response(yaml.safe_dump(spec), media_type="application/yaml")
+# ---
+# Note for FastAPI Routers (e.g., src/routers/ai_ops.py):
+# ---
+# To access bindings, use the request.scope:
+#
+# from fastapi import APIRouter, Request
+#
+# router = APIRouter()
+#
+# @router.post("/chat")
+# async def chat(request: Request, prompt: str):
+#     env = request.scope["env"]
+#     ai_binding = env.WORKERS_AI
+#     d1_binding = env.DB
+#
+#     # Use bindings
+#     response = await ai_binding.run(model, {"prompt": prompt})
+#     await d1_binding.prepare("...").run()
+#
+#     return response
+#
 
-src/routers/d1_ops.py (sketch)
 
-from fastapi import APIRouter, Query
-from src.d1.client import list_rows, get_row, create_row, update_row, delete_row
 
-router = APIRouter()
+✅ Acceptance
 
-@router.get("/{table}/list")
-async def list_table(table: str,
-                     limit: int = Query(50, ge=1, le=500),
-                     offset: int = Query(0, ge=0),
-                     sort: str | None = None,
-                     filter: dict | None = None):
-    return await list_rows(table, filter or {}, limit, offset, sort)
+Deploys with uv run pywrangler deploy (requires pip install uv and uv venv).
+/openapi.json|yaml are live and valid.
+/d1/logs/list returns logs.
+/agent/chat streams responses using Workers AI.
+Cron sync persists telemetry and verbose logs.
+All endpoints respond with CORS headers.
+Fully typed Pydantic models and ASGI compliant.
 
-@router.get("/{table}/{id}")
-async def get_table_row(table: str, id: str):
-    return await get_row(table, id)
+Deliverables
 
-@router.post("/{table}")
-async def create_table_row(table: str, payload: dict):
-    return await create_row(table, payload)
-
-@router.patch("/{table}/{id}")
-async def update_table_row(table: str, id: str, payload: dict):
-    return await update_row(table, id, payload)
-
-@router.delete("/{table}/{id}")
-async def delete_table_row(table: str, id: str):
-    return await delete_row(table, id)
-
-src/routers/tessie_proxy.py (sketch)
-
-from fastapi import APIRouter, Request
-from src.services.tessie import forward
-
-router = APIRouter()
-
-@router.api_route("/{path:path}", methods=["GET","POST","PUT","PATCH","DELETE"])
-async def passthrough(path: str, request: Request):
-    return await forward(path, request)
-
-src/routers/agent_ops.py (sketch)
-
-from fastapi import APIRouter
-from src.services.ai import chat_stream
-from src.services.queue import enqueue_action
-
-router = APIRouter()
-
-@router.post("/chat")
-async def agent_chat(payload: dict):
-    # stream via WS/SSE and persist to agent_messages
-    return await chat_stream(payload)
-
-@router.post("/actions")
-async def agent_action(payload: dict):
-    return await enqueue_action(payload)
-
-src/main.py should:
-	•	Instantiate the app from app.py
-	•	Add CORS middleware (manual headers if middleware fails)
-	•	Expose handlers for:
-	•	HTTP fetch → route to app
-	•	Cron event → call sync function
-	•	Queue consumer event → process messages
-	•	WebSocket /ws + SSE /events (if WS not available, keep SSE only)
-	•	Ensure every request/response is logged to D1 (redacted).
-
-⸻
-
-Acceptance Criteria
-	•	wrangler deploy succeeds with cf-requirements.txt pins above.
-	•	GET /openapi.json and GET /openapi.yaml both work and reflect all routes.
-	•	GET /d1/logs/list?limit=10 returns recent log rows.
-	•	POST /agent/chat returns a stream and writes agent_messages.
-	•	POST /colbycommands/energy-report creates an energy_reports row.
-	•	POST /tessieapi/{vin}/command/honk_horn proxies to Tessie and stores raw in tessie_raw.
-	•	Cron (every 4 hours) writes a sync_runs row and persists slices to charges, climates, etc.
-	•	All endpoints return proper CORS headers for allowed origins.
-
-⸻
-
-TODO (Baseline Assets — fail build if missing)
-	•	cf-requirements.txt with pinned versions (above)
-	•	migrations/0001_init.sql as specified
-	•	src/d1/client.py with execute, list_rows, create_row, update_row, delete_row
-	•	src/services/logging.py logging every request/response to D1
-	•	src/routers/* implemented for all surfaces (d1_ops, agent_ops, tessie_proxy, colby_commands, openapi)
-	•	/ws and /events implemented (SSE fallback)
-	•	Queue producer + (if needed) JS consumer documented for Durable Object/Workflows bridge
-	•	Redaction policy in logger (Authorization, tokens, secrets)
-
-⸻
-
-Deliver the full codebase, ready to deploy, with helpful inline comments where Cloudflare Python limitations require workarounds (e.g., WS, DO/Agents SDK).
+Full modular FastAPI Worker codebase following this structure.
+migrations/0001_init.sql exactly as above.
+pyproject.toml as specified.
+wrangler.toml as specified.
+Inline docstrings explaining WorkerEntrypoint ↔ ASGI bridging, D1 operations, Queue, and AI usage (as shown in the Implementation Pattern).
