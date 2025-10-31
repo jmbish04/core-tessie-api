@@ -34,5 +34,5 @@ export async function getBattery(
   client: TessieClient,
   params: GetBatteryParams
 ): Promise<any> {
-  return await client.request("GET", "/{vin}/battery", params);
+  return client.request("GET", "/{vin}/battery", params);
 }
