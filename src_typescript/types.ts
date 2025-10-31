@@ -136,7 +136,7 @@ export interface BoomboxParams {
   /** Duration to retry the command in seconds */
   retry_duration?: number;
   /** Whether to wait for command completion */
-  wait_for_completion?: string;
+  wait_for_completion?: boolean;
 }
 
 // ============================================================================
