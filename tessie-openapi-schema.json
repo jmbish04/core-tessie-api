@@ -1,0 +1,2382 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tessie API Library",
+    "version": "1.0.0",
+    "description": "Complete OpenAPI specification for all functions in the Tessie API Python library."
+  },
+  "servers": [
+    {
+      "url": "https://api.tessie.com",
+      "description": "Tessie Production API"
+    }
+  ],
+  "tags": [
+    { "name": "Battery", "description": "Endpoints related to battery information." },
+    { "name": "Battery Health", "description": "Endpoints related to battery health and degradation." },
+    { "name": "Boombox", "description": "Endpoints for boombox controls." },
+    { "name": "Charging", "description": "Endpoints for controlling and managing charging." },
+    { "name": "Charges", "description": "Endpoints for viewing charging history and costs." },
+    { "name": "Climate", "description": "Endpoints for controlling vehicle climate." },
+    { "name": "State", "description": "Endpoints for retrieving current vehicle state and information." },
+    { "name": "Doors", "description": "Endpoints for locks and doors." },
+    { "name": "Drives", "description": "Endpoints for drive history and paths." },
+    { "name": "Historical States", "description": "Endpoints for retrieving historical vehicle states." },
+    { "name": "Homelink", "description": "Endpoints for HomeLink controls." },
+    { "name": "Horn", "description": "Endpoints for horn controls." },
+    { "name": "Idles", "description": "Endpoints for idle session history." },
+    { "name": "Keyless Driving", "description": "Endpoints for keyless driving features." },
+    { "name": "Lights", "description": "Endpoints for light controls." },
+    { "name": "Scheduling", "description": "Endpoints for charging and departure scheduling." },
+    { "name": "Sentry Mode", "description": "Endpoints for sentry mode controls." },
+    { "name": "Share", "description": "Endpoints for sharing data to vehicle." },
+    { "name": "Software", "description": "Endpoints for software update management." },
+    { "name": "Speed Limit", "description": "Endpoints for speed limit controls." },
+    { "name": "Status", "description": "Endpoints for vehicle status." },
+    { "name": "Sunroof", "description": "Endpoints for sunroof controls." },
+    { "name": "Tire Pressure", "description": "Endpoints for tire pressure information." },
+    { "name": "Trunks", "description": "Endpoints for trunk controls." },
+    { "name": "Valet Mode", "description": "Endpoints for valet mode controls." },
+    { "name": "Wake", "description": "Endpoints for waking vehicle." },
+    { "name": "Windows", "description": "Endpoints for window controls." }
+  ],
+  "paths": {
+    "/{vin}/battery": {
+      "get": {
+        "tags": ["Battery"],
+        "summary": "Get battery information",
+        "operationId": "get_battery",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Battery information retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/battery_health": {
+      "get": {
+        "tags": ["Battery Health"],
+        "summary": "Get battery health information",
+        "operationId": "get_battery_health",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Start timestamp (Unix)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "End timestamp (Unix)"
+          },
+          {
+            "name": "distance_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/DistanceFormat" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Battery health information retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/remote_boombox": {
+      "get": {
+        "tags": ["Boombox"],
+        "summary": "Trigger remote boombox",
+        "operationId": "boombox",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/start_charging": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Start charging",
+        "operationId": "start_charging",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/stop_charging": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Stop charging",
+        "operationId": "stop_charging",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_charge_limit": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Set charge limit",
+        "operationId": "set_charge_limit",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "percent",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Charge limit percentage"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_charging_amps": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Set charging amps",
+        "operationId": "set_charging_amps",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "amps",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Charging amperage"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/open_charge_port": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Open and unlock charge port",
+        "operationId": "open_unlock_charge_port",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/close_charge_port": {
+      "get": {
+        "tags": ["Charging"],
+        "summary": "Close charge port",
+        "operationId": "close_charge_port",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/charges": {
+      "get": {
+        "tags": ["Charges"],
+        "summary": "Get charging history",
+        "operationId": "get_charges",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "origin_latitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "origin_longitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "origin_radius",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Start timestamp (Unix)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "End timestamp (Unix)"
+          },
+          {
+            "name": "minimum_energy_added",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "distance_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/DistanceFormat" }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/Format" }
+          },
+          {
+            "name": "superchargers_only",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "exclude_origin",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "UTC" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Charging history retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/charges/{charge_id}/set_cost": {
+      "get": {
+        "tags": ["Charges"],
+        "summary": "Set charge session cost",
+        "operationId": "set_charge_cost",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Charge session ID"
+          },
+          {
+            "name": "cost",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Cost of charge session"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Charge cost updated successfully" }
+        }
+      }
+    },
+    "/{vin}/command/start_climate": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Start climate preconditioning",
+        "operationId": "start_climate_preconditioning",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/stop_climate": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Stop climate",
+        "operationId": "stop_climate",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_temperatures": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set temperature",
+        "operationId": "set_temperature",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "temperature",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Target temperature"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_seat_heat": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set seat heat",
+        "operationId": "set_seat_heat",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "seat",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Seat" }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 3 }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_seat_cool": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set seat cooling",
+        "operationId": "set_seat_cool",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "seat",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Seat" }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 3 }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/start_max_defrost": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Start defrost",
+        "operationId": "start_defrost",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/stop_max_defrost": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Stop defrost",
+        "operationId": "stop_defrost",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/start_steering_wheel_heater": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Start steering wheel heater",
+        "operationId": "start_steering_wheel_heater",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/stop_steering_wheel_heater": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Stop steering wheel heater",
+        "operationId": "stop_steering_wheel_heater",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_bioweapon_mode": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set bioweapon defense mode",
+        "operationId": "set_bioweapon_defense_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_climate_keeper_mode": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set climate keeper mode",
+        "operationId": "set_climate_keeper_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/ClimateKeeperMode" }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_cabin_overheat_protection": {
+      "get": {
+        "tags": ["Climate"],
+        "summary": "Set cabin overheat protection",
+        "operationId": "set_cabin_overheat_protection",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "on",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "enum": ["true", "false"] },
+            "description": "Enable or disable cabin overheat protection"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/state": {
+      "get": {
+        "tags": ["State"],
+        "summary": "Get current state",
+        "operationId": "get_state",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "use_cache",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Current state retrieved successfully" }
+        }
+      }
+    },
+    "/vehicles": {
+      "get": {
+        "tags": ["State"],
+        "summary": "Get state of all vehicles",
+        "operationId": "get_state_of_all_vehicles",
+        "parameters": [
+          {
+            "name": "only_active",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "States of all vehicles retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/location": {
+      "get": {
+        "tags": ["State"],
+        "summary": "Get vehicle location",
+        "operationId": "get_location",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Location retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/weather": {
+      "get": {
+        "tags": ["State"],
+        "summary": "Get weather at vehicle location",
+        "operationId": "get_weather",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Weather retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/map": {
+      "get": {
+        "tags": ["State"],
+        "summary": "Get vehicle location map",
+        "operationId": "get_map",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "width",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 300 }
+          },
+          {
+            "name": "heigth",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 300 }
+          },
+          {
+            "name": "zoom",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 13 }
+          },
+          {
+            "name": "marker_size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 75 }
+          },
+          {
+            "name": "style",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/MapStyle" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Map retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/lock": {
+      "get": {
+        "tags": ["Doors"],
+        "summary": "Lock vehicle doors",
+        "operationId": "lock",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/unlock": {
+      "get": {
+        "tags": ["Doors"],
+        "summary": "Unlock vehicle doors",
+        "operationId": "unlock",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/drives": {
+      "get": {
+        "tags": ["Drives"],
+        "summary": "Get drive history",
+        "operationId": "get_drives",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "fromUnix",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "toUnix",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "origin_latitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "origin_lonitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "origin_radius",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "destination_latitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "destination_longitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "destination_radius",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "driver_profile",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "minimum_distance",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "distance_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/DistanceFormat" }
+          },
+          {
+            "name": "temperature_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/TemperatureFormat" }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "UTC" }
+          },
+          {
+            "name": "exclude_origin",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "exclude_destination",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "exclude_tag",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "exclude_driver_profile",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "Format" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Drive history retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/path": {
+      "get": {
+        "tags": ["Drives"],
+        "summary": "Get driving path",
+        "operationId": "get_driving_path",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Start timestamp (Unix)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "End timestamp (Unix)"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Driving path retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/drives/set_tag": {
+      "post": {
+        "tags": ["Drives"],
+        "summary": "Set tag for drives",
+        "operationId": "set_tag",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "drives": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "description": "List of drive IDs"
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Tag to set for the drives"
+                  }
+                },
+                "required": ["drives", "tag"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tag set successfully" }
+        }
+      }
+    },
+    "/{vin}/states": {
+      "get": {
+        "tags": ["Historical States"],
+        "summary": "Get historical states",
+        "operationId": "get_historical_states",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Start timestamp (Unix)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "End timestamp (Unix)"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "condense",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "UTC" }
+          },
+          {
+            "name": "distance_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/DistanceFormat" }
+          },
+          {
+            "name": "temperature_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/TemperatureFormat" }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/Format" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Historical states retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/last_idle_state": {
+      "get": {
+        "tags": ["Historical States"],
+        "summary": "Get last idle state",
+        "operationId": "get_last_idle_state",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Last idle state retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/consumption_since_charge": {
+      "get": {
+        "tags": ["Historical States"],
+        "summary": "Get consumption since last charge",
+        "operationId": "get_consumption_since_charge",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Consumption data retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/trigger_homelink": {
+      "get": {
+        "tags": ["Homelink"],
+        "summary": "Trigger HomeLink",
+        "operationId": "trigger_homelink",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/honk": {
+      "get": {
+        "tags": ["Horn"],
+        "summary": "Honk horn",
+        "operationId": "honk",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/idles": {
+      "get": {
+        "tags": ["Idles"],
+        "summary": "Get idle sessions",
+        "operationId": "get_idles",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "origin_latitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "origin_longitude",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "origin_radius",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "distance_format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/DistanceFormat" }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/Format" }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "UTC" }
+          },
+          {
+            "name": "exclude_origin",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Idle sessions retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/remote_start": {
+      "get": {
+        "tags": ["Keyless Driving"],
+        "summary": "Enable keyless driving",
+        "operationId": "enable_keyless_driving",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/flash": {
+      "get": {
+        "tags": ["Lights"],
+        "summary": "Flash lights",
+        "operationId": "flash_lights",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_scheduled_charging": {
+      "get": {
+        "tags": ["Scheduling"],
+        "summary": "Set scheduled charging",
+        "operationId": "set_scheduled_charging",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "time",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Time in minutes"
+          },
+          {
+            "name": "enable",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_scheduled_departure": {
+      "get": {
+        "tags": ["Scheduling"],
+        "summary": "Set scheduled departure",
+        "operationId": "set_scheduled_departure",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "departure_time",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Departure time in minutes"
+          },
+          {
+            "name": "end_off_peak_time",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "End off-peak time in minutes"
+          },
+          {
+            "name": "enable",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "preconditioning_enabled",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "preconditioning_weekdays_only",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "off_peak_charging_enabled",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "off_peak_charging_weekdays_only",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/enable_sentry": {
+      "get": {
+        "tags": ["Sentry Mode"],
+        "summary": "Enable sentry mode",
+        "operationId": "enable_sentry_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/disable_sentry": {
+      "get": {
+        "tags": ["Sentry Mode"],
+        "summary": "Disable sentry mode",
+        "operationId": "disable_sentry_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/share": {
+      "get": {
+        "tags": ["Share"],
+        "summary": "Share data to vehicle",
+        "operationId": "share",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Value to share"
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en-US" }
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/schedule_software_update": {
+      "get": {
+        "tags": ["Software"],
+        "summary": "Schedule software update",
+        "operationId": "schedule_software_update",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "in_seconds",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Delay in seconds"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/cancel_software_update": {
+      "get": {
+        "tags": ["Software"],
+        "summary": "Cancel software update",
+        "operationId": "cancel_software_update",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/set_speed_limit": {
+      "get": {
+        "tags": ["Speed Limit"],
+        "summary": "Set speed limit",
+        "operationId": "set_speed_limit",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "mph",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Speed limit in MPH"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/enable_speed_limit": {
+      "get": {
+        "tags": ["Speed Limit"],
+        "summary": "Enable speed limit",
+        "operationId": "enable_speed_limit",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "PIN for speed limit"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/disable_speed_limit": {
+      "get": {
+        "tags": ["Speed Limit"],
+        "summary": "Disable speed limit",
+        "operationId": "disable_speed_limit",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "PIN for speed limit"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/clear_speed_limit_pin": {
+      "get": {
+        "tags": ["Speed Limit"],
+        "summary": "Clear speed limit PIN",
+        "operationId": "clear_speed_limit_pin",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "PIN to clear"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/status": {
+      "get": {
+        "tags": ["Status"],
+        "summary": "Get vehicle status",
+        "operationId": "get_status",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Status retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/vent_sunroof": {
+      "get": {
+        "tags": ["Sunroof"],
+        "summary": "Vent sunroof",
+        "operationId": "vent_sunroof",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/close_sunroof": {
+      "get": {
+        "tags": ["Sunroof"],
+        "summary": "Close sunroof",
+        "operationId": "close_sunroof",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/tire_pressure": {
+      "get": {
+        "tags": ["Tire Pressure"],
+        "summary": "Get tire pressure",
+        "operationId": "get_tire_pressure",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Tire pressure retrieved successfully" }
+        }
+      }
+    },
+    "/{vin}/command/activate_front_trunk": {
+      "get": {
+        "tags": ["Trunks"],
+        "summary": "Open front trunk",
+        "operationId": "open_front_trunk",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/activate_rear_trunk": {
+      "get": {
+        "tags": ["Trunks"],
+        "summary": "Open or close rear trunk",
+        "operationId": "open_close_rear_trunk",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/enable_valet": {
+      "get": {
+        "tags": ["Valet Mode"],
+        "summary": "Enable valet mode",
+        "operationId": "enable_valet_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/disable_valet": {
+      "get": {
+        "tags": ["Valet Mode"],
+        "summary": "Disable valet mode",
+        "operationId": "disable_valet_mode",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/wake": {
+      "get": {
+        "tags": ["Wake"],
+        "summary": "Wake vehicle",
+        "operationId": "wake",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Wake command sent successfully" }
+        }
+      }
+    },
+    "/{vin}/command/vent_windows": {
+      "get": {
+        "tags": ["Windows"],
+        "summary": "Vent windows",
+        "operationId": "vent_windows",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    },
+    "/{vin}/command/close_windows": {
+      "get": {
+        "tags": ["Windows"],
+        "summary": "Close windows",
+        "operationId": "close_windows",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Vehicle Identification Number"
+          },
+          {
+            "name": "retry_duration",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 40 }
+          },
+          {
+            "name": "wait_for_completion",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": true }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Command acknowledged" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MapStyle": {
+        "type": "string",
+        "enum": ["light", "dark"],
+        "description": "Map style"
+      },
+      "DistanceFormat": {
+        "type": "string",
+        "enum": ["mi", "km"],
+        "description": "Distance format (miles or kilometers)",
+        "default": "km"
+      },
+      "TemperatureFormat": {
+        "type": "string",
+        "enum": ["c", "f"],
+        "description": "Temperature format (Celsius or Fahrenheit)",
+        "default": "c"
+      },
+      "Format": {
+        "type": "string",
+        "enum": ["json", "csv"],
+        "description": "Response format",
+        "default": "json"
+      },
+      "Seat": {
+        "type": "string",
+        "enum": [
+          "all",
+          "front_left",
+          "front_right",
+          "rear_left",
+          "rear_center",
+          "rear_right",
+          "third_row_left",
+          "third_row_right"
+        ],
+        "description": "Seat position"
+      },
+      "ClimateKeeperMode": {
+        "type": "integer",
+        "enum": [0, 1, 2, 3],
+        "description": "Climate keeper mode: 0 = Disable, 1 = Keep Mode, 2 = Dog Mode, 3 = Camp Mode"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication using Bearer token"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}
