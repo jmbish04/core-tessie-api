@@ -1,0 +1,350 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Core Tessie API Worker",
+    "version": "1.0.0",
+    "description": "OpenAPI description for the Core Tessie API Cloudflare Worker."
+  },
+  "servers": [
+    {
+      "url": "https://core-tessie-api.example.com",
+      "description": "Production deployment"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Vehicle State",
+      "description": "Operations that retrieve vehicle state data."
+    },
+    {
+      "name": "Vehicle Commands",
+      "description": "Operations that send commands to vehicles."
+    }
+  ],
+  "paths": {
+    "/status": {
+      "get": {
+        "tags": [
+          "Vehicle State"
+        ],
+        "summary": "Get vehicle status",
+        "operationId": "getVehicleStatus",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "query",
+            "description": "Vehicle identification number to query.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicle status payload returned by Tessie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TessieResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/wake": {
+      "post": {
+        "tags": [
+          "Vehicle Commands"
+        ],
+        "summary": "Wake a vehicle",
+        "operationId": "wakeVehicle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wake command acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TessieResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/command/start_charging": {
+      "post": {
+        "tags": [
+          "Vehicle Commands"
+        ],
+        "summary": "Start charging a vehicle",
+        "operationId": "startCharging",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Charging command acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TessieResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/command/set_charge_limit": {
+      "post": {
+        "tags": [
+          "Vehicle Commands"
+        ],
+        "summary": "Set the charge limit for a vehicle",
+        "operationId": "setChargeLimit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargeLimitPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Charge limit command acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TessieResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT signed with HS256 using the Worker environment variable `JWT_SECRET`."
+      }
+    },
+    "schemas": {
+      "VinPayload": {
+        "type": "object",
+        "required": [
+          "vin"
+        ],
+        "properties": {
+          "vin": {
+            "type": "string",
+            "description": "Vehicle identification number used to scope the command or query.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChargeLimitPayload": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VinPayload"
+          },
+          {
+            "type": "object",
+            "required": [
+              "percent"
+            ],
+            "properties": {
+              "percent": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Desired charge limit percentage (0-100).",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        ]
+      },
+      "TessieResponse": {
+        "type": "object",
+        "description": "Arbitrary JSON payload returned by Tessie APIs.",
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable description of the error."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication credentials were missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated caller does not have access",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested endpoint was not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Unexpected error encountered",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
