@@ -710,13 +710,13 @@ export interface GetIdlesParams {
   /** Start timestamp (Unix) */
   from: number;
   /** End timestamp (Unix) */
-  to: string;
+  to: number;
   /** Origin latitude coordinate */
-  origin_latitude: string;
+  origin_latitude: number;
   /** Origin longitude coordinate */
-  origin_longitude: string;
+  origin_longitude: number;
   /** Radius around origin in meters */
-  origin_radius: string;
+  origin_radius: number;
   /** Distance format (miles or kilometers) */
   distance_format?: DistanceFormat;
   /** Response format */
