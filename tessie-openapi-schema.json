@@ -1183,7 +1183,7 @@
             "name": "format",
             "in": "query",
             "required": false,
-            "schema": { "type": "string", "default": "Format" }
+            "schema": { "$ref": "#/components/schemas/Format" }
           }
         ],
         "responses": {
