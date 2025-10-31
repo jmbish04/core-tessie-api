@@ -967,7 +967,7 @@
             "schema": { "type": "integer", "default": 300 }
           },
           {
-            "name": "heigth",
+            "name": "height",
             "in": "query",
             "required": false,
             "schema": { "type": "integer", "default": 300 }
