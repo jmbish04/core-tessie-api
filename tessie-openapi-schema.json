@@ -845,7 +845,7 @@
             "name": "on",
             "in": "query",
             "required": true,
-            "schema": { "type": "string", "enum": ["true", "false"] },
+            "schema": { "type": "boolean" },
             "description": "Enable or disable cabin overheat protection"
           },
           {
