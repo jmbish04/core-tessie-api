@@ -1072,7 +1072,7 @@
             "description": "Vehicle Identification Number"
           },
           {
-            "name": "fromUnix",
+            "name": "from",
             "in": "query",
             "required": true,
             "schema": { "type": "integer" }
