@@ -55,5 +55,5 @@ schedule = "0 */4 * * *"
 
 
 [scripts]
-build = "python build.py"
+# build = "python build.py"
 deploy = "python deploy.py"
