@@ -122,7 +122,7 @@
             "name": "wait_for_completion",
             "in": "query",
             "required": false,
-            "schema": { "type": "boolean", "default": true }
+            "schema": { "type": "string", "enum": ["true", "false"], "default": "true" }
           }
         ],
         "responses": {
