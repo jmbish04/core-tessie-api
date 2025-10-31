@@ -5,10 +5,6 @@ compatibility_date = "2024-05-12"
 compatibility_flags = ["python_workers"]
 workers_dev = true
 
-[build]
-# Updated for Cloudflare Python Worker support
-command = "pip install -r cf-requirements.txt"
-
 # 🔐 Secrets
 # Define via: wrangler secret put TESSIE_API_KEY
 #             wrangler secret put JWT_SECRET
