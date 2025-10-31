@@ -9,6 +9,11 @@ workers_dev = true
 # Define via: wrangler secret put TESSIE_API_KEY
 #             wrangler secret put JWT_SECRET
 
+[build]
+# This command tells pip to install your project and its dependencies
+# from pyproject.toml before bundling.
+command = "pip install -e ."
+
 # 🧠 Workers AI Binding
 # Gives the Worker direct access to Cloudflare’s AI inference platform.
 [ai]
