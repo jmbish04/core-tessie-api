@@ -1090,7 +1090,7 @@
             "schema": { "type": "integer" }
           },
           {
-            "name": "origin_lonitude",
+            "name": "origin_longitude",
             "in": "query",
             "required": true,
             "schema": { "type": "integer" }
