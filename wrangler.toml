@@ -1,18 +1,19 @@
-# 🌀 Wrangler Configuration for Core Tessie API Worker
+# 🌀 Wrangler Configuration for Core Tessie API Worker (TypeScript)
 name = "core-tessie-api"
-main = "src/main.py"
+main = "src/worker.ts"
 compatibility_date = "2024-05-12"
-compatibility_flags = ["python_workers"]
 workers_dev = true
+node_compat = true
 
 # 🔐 Secrets
 # Define via: wrangler secret put TESSIE_API_KEY
-#             wrangler secret put JWT_SECRET
 
-[build]
-# This command tells pip to install your project and its dependencies
-# from pyproject.toml before bundling.
-command = "pip install -e ."
+# 📝 Observability Configuration
+observability = { enabled = true }
+
+# Verbose logging for full transparency
+[logpush]
+enabled = true
 
 # 🧠 Workers AI Binding
 # Gives the Worker direct access to Cloudflare’s AI inference platform.
