@@ -552,7 +552,7 @@ export interface GetDrivesParams {
   /** Start timestamp (Unix) */
   from: number;
   /** End timestamp (Unix) */
-  toUnix: number;
+  to: number;
   /** Origin latitude coordinate */
   origin_latitude: number;
   /** Origin longitude coordinate */
