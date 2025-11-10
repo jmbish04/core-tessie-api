@@ -1,0 +1,22 @@
+{
+  "name": "multi-protocol-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "wrangler dev",
+    "db:gen": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply vibe-db --local"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^5.5.0",
+    "drizzle-orm": "^0.29.3",
+    "hono": "^3.11.7",
+    "kysely": "^0.27.2",
+    "kysely-d1": "^0.3.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.20.9",
+    "wrangler": "^3.14.0"
+  }
+}
