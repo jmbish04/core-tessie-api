@@ -1,27 +1,40 @@
 [project]
-name = "tessie_api"
-version = "0.0.1"
-description = "Tessie API running on Cloudflare Python Worker"
-readme = "README.md"
-requires-python = ">=3.5"
-exclude = ["*.env", "*.env.example", ".devcontainer/", ".vscode/", "tests/"]
+name = "tessie-unified-worker"
+version = "2.0.0"
+description = "Cloudflare Python Worker providing unified access to Tessie, Teslemetry, and Tesla Fleet APIs"
+readme = "README_PYTHON.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
 dependencies = [
-    "PyJWT==2.8.0",
-    "python-dotenv>=1.0.1",
-    "aiohttp>=3.9.5",
-    "pytz>=2024.1",
-    "pytest-asyncio>=0.23.8",
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Operating System :: OS Independent",
+    "httpx>=0.27.0",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/andrewgierens/tessie_python_api"
-"Bug Tracker" = "https://github.com/andrewgierens/tessie_python_api/issues"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests_python"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src_python"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+]
