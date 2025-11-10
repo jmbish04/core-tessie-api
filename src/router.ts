@@ -44,7 +44,7 @@ export function buildRouter() {
   // ============== HEALTH & TESTING API ==============
   app.get("/api/health", async (c) => {
     const latestSession = await getLatestSession(c.env);
-    const isHealthy = latestSession.results.every(r => r.status === 'pass');
+    const isHealthy = latestSession.results.length > 0 && latestSession.results.every(r => r.status === 'pass');
     return c.json({
         healthy: isHealthy,
         last_test_session: latestSession.session_uuid,
