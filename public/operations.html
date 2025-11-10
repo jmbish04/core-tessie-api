@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Dashboard - Core Cursor API</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="container">
+    <div class="health-header">
+      <h1>Cursor Sessions - Operations Dashboard</h1>
+      <p style="color: var(--text-secondary); max-width: 800px; margin: 0 auto;">
+        Monitor active Cursor IDE sessions, view event counts, interventions, and drill down into session details.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom: 2rem;">
+      <h3>Filters</h3>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <select id="filter-status" class="btn btn-secondary" style="width: auto;">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="idle">Idle</option>
+          <option value="ended">Ended</option>
+          <option value="error">Error</option>
+        </select>
+        <input
+          type="text"
+          id="filter-project"
+          placeholder="Filter by project..."
+          class="btn btn-secondary"
+          style="flex: 1; max-width: 300px;"
+        />
+        <button class="btn btn-primary" onclick="loadSessions()">Apply Filters</button>
+        <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <div class="session-table" id="sessions-table">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading sessions...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/client.js"></script>
+  <script>
+    async function loadSessions() {
+      const tableEl = document.getElementById('sessions-table');
+
+      tableEl.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading sessions...</p>
+        </div>
+      `;
+
+      try {
+        const status = document.getElementById('filter-status').value;
+        const project = document.getElementById('filter-project').value;
+
+        const filters = {};
+        if (status) filters.status = status;
+        if (project) filters.project = project;
+
+        const data = await API.listCursorSessions(filters);
+
+        tableEl.innerHTML = UI.renderSessionTable(data.sessions);
+      } catch (error) {
+        console.error('Failed to load sessions:', error);
+        tableEl.innerHTML = `
+          <div style="text-align: center; padding: 3rem; color: var(--error);">
+            <p>Failed to load sessions</p>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem;">${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-project').value = '';
+      loadSessions();
+    }
+
+    // Load sessions on page load
+    loadSessions();
+
+    // Auto-refresh every 10 seconds
+    setInterval(loadSessions, 10000);
+  </script>
+</body>
+</html>

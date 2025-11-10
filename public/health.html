@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Dashboard - Core Cursor API</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="container">
+    <div class="health-header">
+      <h1>System Health Dashboard</h1>
+      <div id="health-status">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading health status...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-bar" id="metrics"></div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="margin: 0;">Test Results</h2>
+        <button class="btn btn-primary" onclick="runHealthTests()">
+          <span id="run-btn-text">Run Health Tests</span>
+        </button>
+      </div>
+      <div id="test-results">
+        <p style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          Click "Run Health Tests" to execute diagnostic checks
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+      <h3>Component Status</h3>
+      <div id="component-checks"></div>
+    </div>
+  </div>
+
+  <script src="/client.js"></script>
+  <script>
+    let currentSessionId = null;
+
+    async function loadHealthStatus() {
+      try {
+        const data = await API.getHealth();
+
+        // Render status
+        const statusEl = document.getElementById('health-status');
+        statusEl.innerHTML = UI.renderHealthStatus(data.status);
+
+        // Render metrics
+        if (data.metrics) {
+          UI.renderMetrics({
+            'Active Tests': data.metrics.activeTests,
+            'Pass Rate': `${(data.metrics.passRate * 100).toFixed(1)}%`,
+            'Status': data.status.toUpperCase()
+          }, 'metrics');
+        }
+
+        // Render component checks
+        const checksEl = document.getElementById('component-checks');
+        if (data.checks) {
+          checksEl.innerHTML = `
+            <div class="test-results">
+              <div class="test-item">
+                <div class="test-name">Database</div>
+                <div class="test-badge ${data.checks.database ? 'pass' : 'fail'}">
+                  ${data.checks.database ? 'PASS' : 'FAIL'}
+                </div>
+              </div>
+              <div class="test-item">
+                <div class="test-name">Workers AI</div>
+                <div class="test-badge ${data.checks.ai ? 'pass' : 'fail'}">
+                  ${data.checks.ai ? 'PASS' : 'FAIL'}
+                </div>
+              </div>
+              <div class="test-item">
+                <div class="test-name">Durable Objects</div>
+                <div class="test-badge ${data.checks.durableObjects ? 'pass' : 'fail'}">
+                  ${data.checks.durableObjects ? 'PASS' : 'FAIL'}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Failed to load health status:', error);
+        UI.showError('health-status', 'Failed to load health status');
+      }
+    }
+
+    async function runHealthTests() {
+      const btn = document.getElementById('run-btn-text');
+      const resultsEl = document.getElementById('test-results');
+
+      btn.textContent = 'Running...';
+      resultsEl.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Executing health tests...</p>
+        </div>
+      `;
+
+      try {
+        const data = await API.runTests(null, false);
+
+        currentSessionId = data.sessionId;
+
+        if (data.results) {
+          resultsEl.innerHTML = `
+            <div style="margin-bottom: 1rem;">
+              <strong>Session:</strong> <code>${data.sessionId}</code> |
+              <strong>Passed:</strong> ${data.summary.passed}/${data.summary.total} |
+              <strong>Duration:</strong> ${UI.formatDuration(data.summary.duration)}
+            </div>
+            <div class="test-results">
+              ${UI.renderTestResults(data.results)}
+            </div>
+          `;
+        }
+
+        // Refresh health status
+        await loadHealthStatus();
+      } catch (error) {
+        console.error('Failed to run tests:', error);
+        UI.showError('test-results', 'Failed to run health tests');
+      } finally {
+        btn.textContent = 'Run Health Tests';
+      }
+    }
+
+    // Load initial status
+    loadHealthStatus();
+
+    // Auto-refresh every 30 seconds
+    setInterval(loadHealthStatus, 30000);
+  </script>
+</body>
+</html>

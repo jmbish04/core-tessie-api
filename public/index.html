@@ -1,74 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tessie API Dashboard</title>
-    <link rel="stylesheet" href="/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Core Cursor API - AI-Powered IDE Telemetry & Health Monitoring</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Tessie API Dashboard</h1>
-            <p class="subtitle">Manage your Tesla vehicles via the Tessie API</p>
-        </header>
+  <div id="nav-container"></div>
 
-        <main>
-            <section class="card">
-                <h2>API Endpoints</h2>
-                <div class="endpoints">
-                    <div class="endpoint">
-                        <span class="method get">GET</span>
-                        <code>/status?vin=YOUR_VIN</code>
-                        <p>Get current vehicle state</p>
-                    </div>
-                    <div class="endpoint">
-                        <span class="method post">POST</span>
-                        <code>/wake</code>
-                        <p>Wake up the vehicle</p>
-                    </div>
-                    <div class="endpoint">
-                        <span class="method post">POST</span>
-                        <code>/command/start_charging</code>
-                        <p>Start charging the vehicle</p>
-                    </div>
-                    <div class="endpoint">
-                        <span class="method post">POST</span>
-                        <code>/command/set_charge_limit</code>
-                        <p>Set charge limit (requires percent parameter)</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card">
-                <h2>Authentication</h2>
-                <p>All API requests require a JWT bearer token in the Authorization header:</p>
-                <pre><code>Authorization: Bearer YOUR_JWT_TOKEN</code></pre>
-                <p>Generate a token using the provided JWT utilities in the repository.</p>
-            </section>
-
-            <section class="card">
-                <h2>Quick Start</h2>
-                <ol>
-                    <li>Configure your JWT secret: <code>wrangler secret put JWT_SECRET</code></li>
-                    <li>Configure your Tessie API key: <code>wrangler secret put TESSIE_API_KEY</code></li>
-                    <li>Generate a JWT token using the helper module</li>
-                    <li>Make API requests with your token</li>
-                </ol>
-            </section>
-
-            <section class="card">
-                <h2>Example Request</h2>
-                <pre><code>curl -X GET "https://your-worker.workers.dev/status?vin=YOUR_VIN" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"</code></pre>
-            </section>
-        </main>
-
-        <footer>
-            <p>Core Tessie API Worker | Powered by Cloudflare Workers</p>
-        </footer>
+  <section class="hero">
+    <h1>Core Cursor API</h1>
+    <p class="subtitle">Multi-Protocol Worker with AI-Powered Interventions</p>
+    <p class="description">
+      Real-time Cursor IDE telemetry, policy enforcement, and health monitoring powered by
+      Cloudflare Workers, Durable Objects, D1, and Workers AI. Supports REST, WebSocket, RPC, and MCP protocols.
+    </p>
+    <div class="btn-group">
+      <a href="/health.html" class="btn btn-primary">View Health Dashboard</a>
+      <a href="/operations.html" class="btn btn-secondary">Explore Operations</a>
+      <a href="/openapi.json" target="_blank" class="btn btn-secondary">API Documentation</a>
     </div>
+  </section>
 
-    <script src="/script.js"></script>
+  <div class="container">
+    <section>
+      <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 1rem;">Why Core Cursor API?</h2>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+        Traditional IDE monitoring is reactive. Core Cursor API is proactive - detecting issues, enforcing best practices,
+        and suggesting fixes in real-time using AI-powered policy interventions.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-icon">🚀</div>
+          <h3>Real-Time Telemetry</h3>
+          <p>
+            Stream Cursor IDE events via WebSocket, log commands, diffs, errors, and warnings with millisecond precision.
+            All data persisted to D1 for historical analysis.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🧠</div>
+          <h3>AI-Powered Interventions</h3>
+          <p>
+            Workers AI analyzes every event against active policies. Detect deprecated patterns, missing error handling,
+            hardcoded secrets, and automatically suggest fixes with context-aware reasoning.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h3>Health Monitoring</h3>
+          <p>
+            Continuous health checks for databases, AI bindings, Durable Objects, and API endpoints.
+            Cron-scheduled tests with AI-generated diagnostics for failures.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🔌</div>
+          <h3>Multi-Protocol Support</h3>
+          <p>
+            REST APIs, WebSocket rooms, JSON-RPC, and MCP (Model Context Protocol) - all in one Worker.
+            Choose the protocol that fits your workflow.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🛡️</div>
+          <h3>Policy Enforcement</h3>
+          <p>
+            Define custom rules to advise, warn, block, or auto-fix code patterns.
+            Enforce OpenAPI 3.1.0, prevent hardcoded secrets, migrate from legacy APIs automatically.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3>Edge Performance</h3>
+          <p>
+            Runs on Cloudflare's global edge network. Sub-10ms latency, hibernatable Durable Objects,
+            and zero cold starts for WebSocket connections.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 4rem;">
+      <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 3rem;">Key Features</h2>
+
+      <div class="card" style="margin-bottom: 2rem;">
+        <h3>🎯 Cursor IDE Integration</h3>
+        <ul style="color: var(--text-secondary); line-height: 2;">
+          <li>Start telemetry sessions with <code>/api/cursor/session/start</code></li>
+          <li>Stream events via WebSocket to <code>/cursor/ws?sessionId=...</code></li>
+          <li>Receive interventions and policy notices in real-time</li>
+          <li>Acknowledge fixes with <code>/api/cursor/intervention/ack</code></li>
+          <li>View session history and suggestions in Operations dashboard</li>
+        </ul>
+      </div>
+
+      <div class="card" style="margin-bottom: 2rem;">
+        <h3>🔍 Health & Testing</h3>
+        <ul style="color: var(--text-secondary); line-height: 2;">
+          <li>On-demand and scheduled (cron) health checks</li>
+          <li>Test database connectivity, Workers AI, Durable Objects</li>
+          <li>AI-generated error diagnostics and fix suggestions</li>
+          <li>Session-based test results with duration tracking</li>
+          <li>Pass/fail rates and historical trending</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>📡 Protocols & APIs</h3>
+        <ul style="color: var(--text-secondary); line-height: 2;">
+          <li><strong>REST:</strong> <code>/api/health</code>, <code>/api/tests/run</code>, <code>/api/cursor/*</code></li>
+          <li><strong>WebSocket:</strong> <code>/ws</code> (general), <code>/cursor/ws</code> (Cursor-specific)</li>
+          <li><strong>RPC:</strong> <code>/rpc</code> with methods like <code>cursor.getSuggestions</code></li>
+          <li><strong>MCP:</strong> <code>/mcp/tools</code>, <code>/mcp/execute</code> for AI agent integration</li>
+          <li><strong>OpenAPI 3.1.0:</strong> <code>/openapi.json</code>, <code>/openapi.yaml</code></li>
+        </ul>
+      </div>
+    </section>
+
+    <section style="margin-top: 4rem;">
+      <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Use Cases</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Code Quality Enforcement</h3>
+          <p>Prevent deprecated APIs, enforce type safety, detect security vulnerabilities in real-time as developers code.</p>
+        </div>
+        <div class="card">
+          <h3>Team Compliance</h3>
+          <p>Ensure all team members follow architectural patterns, logging standards, and security best practices.</p>
+        </div>
+        <div class="card">
+          <h3>Incident Prevention</h3>
+          <p>Catch misconfigurations before deployment. AI identifies potential runtime errors from static code analysis.</p>
+        </div>
+        <div class="card">
+          <h3>Developer Onboarding</h3>
+          <p>Guide new developers with contextual suggestions, fix prompts, and policy explanations embedded in their IDE.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2025 Core Cursor API | Powered by Cloudflare Workers</p>
+    <p style="margin-top: 0.5rem;">
+      <a href="/health.html" style="color: var(--primary); text-decoration: none;">Health</a> •
+      <a href="/operations.html" style="color: var(--primary); text-decoration: none;">Operations</a> •
+      <a href="/openapi.json" target="_blank" style="color: var(--primary); text-decoration: none;">API Docs</a>
+    </p>
+  </footer>
+
+  <script src="/client.js"></script>
 </body>
 </html>

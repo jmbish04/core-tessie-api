@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Details - Core Cursor API</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/xterm@5.3.0/css/xterm.css" />
+  <script src="https://unpkg.com/xterm@5.3.0/lib/xterm.js"></script>
+</head>
+<body>
+  <div id="nav-container"></div>
+
+  <div class="container">
+    <div class="health-header">
+      <h1>Cursor Session Details</h1>
+      <div id="session-meta"></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+      <!-- Terminal -->
+      <div class="card">
+        <h3>Live Terminal</h3>
+        <div class="terminal-container">
+          <div id="terminal"></div>
+        </div>
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+          <input
+            type="text"
+            id="command-input"
+            placeholder="Enter command..."
+            class="btn btn-secondary"
+            style="flex: 1;"
+            onkeypress="if(event.key==='Enter') sendCommand()"
+          />
+          <button class="btn btn-primary" onclick="sendCommand()">Send</button>
+        </div>
+      </div>
+
+      <!-- AI Suggestions -->
+      <div class="card">
+        <h3>AI Suggestions</h3>
+        <div id="suggestions">
+          <p style="color: var(--text-muted);">Loading suggestions...</p>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 1rem; width: 100%;" onclick="loadSuggestions()">
+          Refresh Suggestions
+        </button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+      <!-- Recent Events -->
+      <div class="card">
+        <h3>Recent Events</h3>
+        <div id="recent-events">
+          <p style="color: var(--text-muted);">Loading events...</p>
+        </div>
+      </div>
+
+      <!-- Interventions -->
+      <div class="card">
+        <h3>Interventions</h3>
+        <div id="interventions">
+          <p style="color: var(--text-muted);">Loading interventions...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/client.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('id');
+
+    if (!sessionId) {
+      alert('No session ID provided');
+      window.location.href = '/operations.html';
+    }
+
+    // Initialize xterm.js terminal
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4'
+      }
+    });
+
+    term.open(document.getElementById('terminal'));
+    term.writeln('Connected to Cursor session: ' + sessionId);
+    term.writeln('');
+
+    // WebSocket connection
+    let ws = null;
+
+    function connectWebSocket() {
+      const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/cursor/ws?sessionId=${sessionId}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        term.writeln('\x1b[32m[Connected to WebSocket]\x1b[0m');
+        ws.send(JSON.stringify({ type: 'hello' }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.type === 'intervention') {
+            term.writeln('');
+            term.writeln('\x1b[33m[INTERVENTION]\x1b[0m');
+            term.writeln(`Rule: ${message.ruleId}`);
+            term.writeln(`Decision: ${message.decision}`);
+            term.writeln(`Instruction: ${message.instruction}`);
+            if (message.aiReasoning) {
+              term.writeln(`Reasoning: ${message.aiReasoning}`);
+            }
+            term.writeln('');
+          } else if (message.type === 'event_logged') {
+            term.writeln(`\x1b[36m[Event logged: ${message.eventId}]\x1b[0m`);
+          } else {
+            term.writeln(`\x1b[90m${JSON.stringify(message)}\x1b[0m`);
+          }
+        } catch (e) {
+          term.writeln(event.data);
+        }
+      };
+
+      ws.onerror = (error) => {
+        term.writeln('\x1b[31m[WebSocket error]\x1b[0m');
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        term.writeln('\x1b[31m[WebSocket closed]\x1b[0m');
+      };
+    }
+
+    function sendCommand() {
+      const input = document.getElementById('command-input');
+      const command = input.value.trim();
+
+      if (!command) return;
+
+      term.writeln(`\x1b[32m$\x1b[0m ${command}`);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'event',
+          data: {
+            sessionId,
+            type: 'command',
+            level: 'info',
+            payload: { command },
+            tags: ['manual', 'terminal']
+          }
+        }));
+      }
+
+      input.value = '';
+    }
+
+    async function loadSessionDetails() {
+      try {
+        const data = await API.getCursorSession(sessionId);
+
+        // Session meta
+        const metaEl = document.getElementById('session-meta');
+        metaEl.innerHTML = `
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border); display: inline-block; margin-top: 1rem;">
+            <strong>Project:</strong> ${data.session.project || 'N/A'} |
+            <strong>Status:</strong> <span class="status-badge ${data.session.status}">${data.session.status}</span> |
+            <strong>Started:</strong> ${UI.formatTimestamp(data.session.startedAt)}
+          </div>
+        `;
+
+        // Recent events
+        const eventsEl = document.getElementById('recent-events');
+        if (data.recentEvents && data.recentEvents.length > 0) {
+          eventsEl.innerHTML = data.recentEvents.slice(0, 10).map(event => `
+            <div style="padding: 0.75rem; background: var(--bg-dark); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid var(--primary);">
+              <div style="font-size: 0.875rem; color: var(--text-muted);">${UI.formatTimestamp(event.ts)}</div>
+              <div style="font-weight: 600; margin: 0.25rem 0;">${event.type}</div>
+              <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                ${JSON.stringify(event.payload).substring(0, 100)}...
+              </div>
+            </div>
+          `).join('');
+        } else {
+          eventsEl.innerHTML = '<p style="color: var(--text-muted);">No events yet</p>';
+        }
+
+        // Interventions
+        const interventionsEl = document.getElementById('interventions');
+        if (data.interventions && data.interventions.length > 0) {
+          interventionsEl.innerHTML = data.interventions.map(int => `
+            <div style="padding: 0.75rem; background: var(--bg-dark); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid var(--warning);">
+              <div style="font-weight: 600;">${int.ruleId}</div>
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.5rem 0;">
+                ${int.instruction}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                ${int.decision} • ${int.delivered ? 'Delivered' : 'Pending'}
+              </div>
+            </div>
+          `).join('');
+        } else {
+          interventionsEl.innerHTML = '<p style="color: var(--text-muted);">No interventions</p>';
+        }
+      } catch (error) {
+        console.error('Failed to load session details:', error);
+      }
+    }
+
+    async function loadSuggestions() {
+      const suggestionsEl = document.getElementById('suggestions');
+      suggestionsEl.innerHTML = '<p style="color: var(--text-muted);">Generating suggestions...</p>';
+
+      try {
+        const result = await API.rpc('cursor.getSuggestions', { sessionId });
+
+        if (result.result && result.result.suggestions) {
+          suggestionsEl.innerHTML = result.result.suggestions.map((s, i) => `
+            <div style="padding: 0.75rem; background: var(--bg-dark); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+              <div style="font-weight: 600; color: var(--info); margin-bottom: 0.25rem;">${i + 1}. Suggestion</div>
+              <div style="font-size: 0.875rem; color: var(--text-secondary);">${s}</div>
+            </div>
+          `).join('');
+        } else {
+          suggestionsEl.innerHTML = '<p style="color: var(--text-muted);">No suggestions available</p>';
+        }
+      } catch (error) {
+        console.error('Failed to load suggestions:', error);
+        suggestionsEl.innerHTML = '<p style="color: var(--error);">Failed to load suggestions</p>';
+      }
+    }
+
+    // Initialize
+    connectWebSocket();
+    loadSessionDetails();
+    loadSuggestions();
+
+    // Auto-refresh
+    setInterval(loadSessionDetails, 10000);
+  </script>
+</body>
+</html>

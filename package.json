@@ -1,0 +1,27 @@
+{
+  "name": "core-cursor-api",
+  "version": "1.0.0",
+  "description": "Multi-protocol Cloudflare Worker with Cursor IDE telemetry and AI-powered interventions",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "db:create": "wrangler d1 create cursor-core-db",
+    "db:migrate": "wrangler d1 migrations apply cursor-core-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply cursor-core-db --remote"
+  },
+  "dependencies": {
+    "hono": "^4.0.0",
+    "zod": "^3.22.4",
+    "@asteasolutions/zod-to-openapi": "^7.0.0",
+    "kysely": "^0.27.3",
+    "drizzle-orm": "^0.30.0",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240208.0",
+    "wrangler": "^3.28.0",
+    "typescript": "^5.3.3"
+  }
+}
