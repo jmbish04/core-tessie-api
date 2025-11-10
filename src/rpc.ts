@@ -1,27 +1,42 @@
 import { z } from "zod";
 import * as S from "./schemas/apiSchemas";
+import { getKyselyClient } from "./utils/db";
 import type { Env } from "./types";
+import type { NewTask } from "./utils/db";
 
-const createTask = async (params: unknown) => {
+const createTask = async (params: unknown, env: Env) => {
   const input = S.CreateTaskRequest.parse(params);
-  const task = {
+  const db = getKyselyClient(env);
+
+  const newTask: NewTask = {
     id: crypto.randomUUID(),
     title: input.title,
-    status: "pending" as const,
-    createdAt: new Date().toISOString(),
+    status: "pending",
+    created_at: new Date().toISOString(),
   };
-  // In a real app, you would save this to a database (e.g., D1)
+
+  const task = await db
+    .insertInto('tasks')
+    .values(newTask)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
   return { success: true as const, task };
 };
 
-const listTasks = async () => {
-  // In a real app, you would fetch this from a database
-  return { success: true as const, tasks: [] };
+const listTasks = async (params: unknown, env: Env) => {
+  const db = getKyselyClient(env);
+  const tasks = await db
+    .selectFrom('tasks')
+    .selectAll()
+    .orderBy('created_at', 'desc')
+    .execute();
+
+  return { success: true as const, tasks };
 };
 
 const runAnalysis = async (params: unknown) => {
   const input = S.AnalysisRequest.parse(params);
-  // In a real app, you would perform some analysis
   return {
     success: true as const,
     report: {

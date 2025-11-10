@@ -32,6 +32,13 @@ export const test_results = sqliteTable('test_results', {
     created_at: text('created_at').notNull(),
 });
 
+export const tasks = sqliteTable('tasks', {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    status: text('status', { enum: ['pending', 'running', 'done'] }).notNull().default('pending'),
+    created_at: text('created_at').notNull(),
+});
+
 
 // ======= KYSELY TYPES (for query builder ergonomics) =======
 export type TestDef = Selectable<Database['test_defs']>;
@@ -40,9 +47,14 @@ export type NewTestDef = Insertable<Database['test_defs']>;
 export type TestResult = Selectable<Database['test_results']>;
 export type NewTestResult = Insertable<Database['test_results']>;
 
+export type Task = Selectable<Database['tasks']>;
+export type NewTask = Insertable<Database['tasks']>;
+
+
 interface Database {
     test_defs: TestDef;
     test_results: TestResult;
+    tasks: Task;
 }
 
 // ======= CLIENT INSTANTIATION =======
@@ -50,7 +62,7 @@ interface Database {
  * Provides a Drizzle ORM client for interacting with the D1 database.
  * Recommended for schema-related operations and simple queries.
  */
-export const getDrizzleClient = (env: Env) => drizzle(env.DB, { schema: { test_defs, test_results } });
+export const getDrizzleClient = (env: Env) => drizzle(env.DB, { schema: { test_defs, test_results, tasks } });
 
 /**
  * Provides a Kysely query builder client for interacting with the D1 database.

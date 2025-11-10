@@ -5,13 +5,7 @@ import { mcpRoutes } from "./mcp";
 import { runAllTests } from "./tests/runner";
 import type { Env } from "./types";
 import { z } from "zod";
-
-// A simple placeholder for YAML conversion to avoid adding a new dependency.
-function toYAML(json: object): string {
-    const replacer = (key: string, value: any) => value === null ? "" : value;
-    const yamlString = JSON.stringify(json, replacer, 2);
-    return yamlString.replace(/"([^"]+)":/g, '$1:').replace(/ "([^"]+)"/g, ' $1');
-}
+import { stringify } from "yaml";
 
 const app = buildRouter();
 
@@ -31,7 +25,7 @@ export default {
         }
         if (path === "/openapi.yaml") {
             const doc = buildOpenAPIDocument(url.origin);
-            const yaml = toYAML(doc);
+            const yaml = stringify(doc);
             return new Response(yaml, { headers: { "Content-Type": "application/yaml;charset=UTF-8" } });
         }
 

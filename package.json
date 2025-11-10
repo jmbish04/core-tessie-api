@@ -13,6 +13,7 @@
     "hono": "^3.11.7",
     "kysely": "^0.27.2",
     "kysely-d1": "^0.3.0",
+    "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {
