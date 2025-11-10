@@ -1,4 +1,5 @@
 -- Health and Testing System Tables
+-- Unified migration combining health checks, test framework, and task management
 
 CREATE TABLE IF NOT EXISTS test_defs (
   id TEXT PRIMARY KEY,
@@ -7,7 +8,7 @@ CREATE TABLE IF NOT EXISTS test_defs (
   category TEXT,
   severity TEXT,
   is_active INTEGER NOT NULL DEFAULT 1,
-  error_map TEXT,
+  error_map TEXT, -- JSON string of { code: { meaning, fix } }
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -20,7 +21,7 @@ CREATE TABLE IF NOT EXISTS test_results (
   duration_ms INTEGER,
   status TEXT NOT NULL CHECK (status IN ('pass','fail')),
   error_code TEXT,
-  raw TEXT,
+  raw TEXT, -- JSON
   ai_human_readable_error_description TEXT,
   ai_prompt_to_fix_error TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
