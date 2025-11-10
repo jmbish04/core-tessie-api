@@ -16,7 +16,7 @@ type TestOutcome = {
 
 // Simulates running a single, specific test.
 async function executeTest(test: TestDef, env: Env): Promise<TestOutcome> {
-    const url = `http://localhost:${env.PORT || 8787}`;
+    const url = env.SELF_URL; // You will need to add SELF_URL to your wrangler.toml and the Env type
 
     try {
         switch (test.name) {
