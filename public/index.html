@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tessie API Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Tessie API Dashboard</h1>
+            <p class="subtitle">Manage your Tesla vehicles via the Tessie API</p>
+        </header>
+
+        <main>
+            <section class="card">
+                <h2>API Endpoints</h2>
+                <div class="endpoints">
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <code>/status?vin=YOUR_VIN</code>
+                        <p>Get current vehicle state</p>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <code>/wake</code>
+                        <p>Wake up the vehicle</p>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <code>/command/start_charging</code>
+                        <p>Start charging the vehicle</p>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <code>/command/set_charge_limit</code>
+                        <p>Set charge limit (requires percent parameter)</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Authentication</h2>
+                <p>All API requests require a JWT bearer token in the Authorization header:</p>
+                <pre><code>Authorization: Bearer YOUR_JWT_TOKEN</code></pre>
+                <p>Generate a token using the provided JWT utilities in the repository.</p>
+            </section>
+
+            <section class="card">
+                <h2>Quick Start</h2>
+                <ol>
+                    <li>Configure your JWT secret: <code>wrangler secret put JWT_SECRET</code></li>
+                    <li>Configure your Tessie API key: <code>wrangler secret put TESSIE_API_KEY</code></li>
+                    <li>Generate a JWT token using the helper module</li>
+                    <li>Make API requests with your token</li>
+                </ol>
+            </section>
+
+            <section class="card">
+                <h2>Example Request</h2>
+                <pre><code>curl -X GET "https://your-worker.workers.dev/status?vin=YOUR_VIN" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"</code></pre>
+            </section>
+        </main>
+
+        <footer>
+            <p>Core Tessie API Worker | Powered by Cloudflare Workers</p>
+        </footer>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>
