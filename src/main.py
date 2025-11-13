@@ -120,32 +120,44 @@ async def _handle_set_charge_limit(session: ClientSession, tessie_key: str, para
 
 
 async def fetch(request, env, ctx):  # noqa: D401 - Cloudflare entry point
-    await _authorize_request(request, env)
+    parsed_url = urlparse(str(request.url))
 
-    routes: Dict[Tuple[str, str], Callable[[ClientSession, str, Dict[str, Any]], Awaitable[Any]]] = {
+    # Define API routes that require authentication and custom handling
+    api_routes: Dict[Tuple[str, str], Callable[[ClientSession, str, Dict[str, Any]], Awaitable[Any]]] = {
         ("GET", "/status"): _handle_status,
         ("POST", "/wake"): _handle_wake,
         ("POST", "/command/start_charging"): _handle_start_charging,
         ("POST", "/command/set_charge_limit"): _handle_set_charge_limit,
     }
 
-    parsed_url = urlparse(str(request.url))
-    route_handler = routes.get((request.method.upper(), parsed_url.path))
-    if not route_handler:
-        return _json_response({"error": "Not Found"}, status=404)
+    route_key = (request.method.upper(), parsed_url.path)
+    route_handler = api_routes.get(route_key)
 
-    tessie_key = getattr(env, "TESSIE_API_KEY", None)
-    if not tessie_key:
-        return _json_response({"error": "Tessie API key is not configured"}, status=500)
+    # If this is an API route, handle it with authentication and custom logic
+    if route_handler:
+        await _authorize_request(request, env)
 
-    try:
-        params = await _parse_request_data(request)
-        async with ClientSession() as session:
-            result = await route_handler(session, tessie_key, params)
-    except HTTPException as exc:
-        return _error_response(exc)
-    except Exception as e:  # pragma: no cover - catch-all for worker stability
-        print(f"An unexpected error occurred: {e}") # consider using a proper logger here
-        return _json_response({"error": "Internal Server Error"}, status=500)
+        tessie_key = getattr(env, "TESSIE_API_KEY", None)
+        if not tessie_key:
+            return _json_response({"error": "Tessie API key is not configured"}, status=500)
 
-    return _json_response(result)
+        try:
+            params = await _parse_request_data(request)
+            async with ClientSession() as session:
+                result = await route_handler(session, tessie_key, params)
+        except HTTPException as exc:
+            return _error_response(exc)
+        except Exception as e:  # pragma: no cover - catch-all for worker stability
+            print(f"An unexpected error occurred: {e}") # consider using a proper logger here
+            return _json_response({"error": "Internal Server Error"}, status=500)
+
+        return _json_response(result)
+
+    # For all other routes, serve static assets from the ASSETS binding
+    # This is served for free and does not invoke the Worker
+    assets_binding = getattr(env, "ASSETS", None)
+    if assets_binding:
+        return await assets_binding.fetch(request)
+
+    # Fallback if no assets binding is configured
+    return _json_response({"error": "Not Found"}, status=404)

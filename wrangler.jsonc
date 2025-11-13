@@ -1,42 +1,40 @@
 {
-  "name": "multi-protocol-worker",
+  "name": "core-cursor-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-07",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
   },
   "assets": {
     "directory": "./public",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
   },
   "durable_objects": {
     "bindings": [
-      {
-        "name": "ROOM_DO",
-        "class_name": "RoomDO"
-      }
+      { "name": "ROOM_DO", "class_name": "RoomDO" },
+      { "name": "CURSOR_ROOM_DO", "class_name": "CursorRoomDO" }
     ]
   },
+  "migrations": [
+    { "tag": "v1", "new_classes": ["RoomDO", "CursorRoomDO"] }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "vibe-db",
-      "database_id": "<set-after-create>"
+      "database_name": "cursor-core-db",
+      "database_id": ""
     }
   ],
-  "triggers": {
-      "crons": ["*/15 * * * *"]
+  "ai": {
+    "binding": "AI"
   },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_classes": [
-        "RoomDO"
-      ]
-    }
-  ]
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
 }

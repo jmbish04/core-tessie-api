@@ -1,79 +1,192 @@
+/**
+ * Workers AI utilities for diagnostics and suggestions
+ */
 import type { Env } from '../types';
-import type { TestDef, TestResult } from './db';
+
+export interface AIAnalysisResult {
+  humanReadable: string;
+  fixPrompt: string;
+  confidence: number;
+}
 
 /**
- * Analyzes a failed test result using Workers AI to generate a human-readable
- * description of the error and a suggested prompt for fixing it.
+ * Analyze a test failure and generate human-readable error + fix suggestion
  */
 export async function analyzeTestFailure(
-    env: Env,
-    testDef: TestDef,
-    testResult: TestResult
-): Promise<{ humanReadableError: string; fixSuggestion: string }> {
+  env: Env,
+  testName: string,
+  errorCode: string | null,
+  rawError: string | null
+): Promise<AIAnalysisResult> {
+  try {
+    const prompt = `You are a debugging assistant. Analyze this test failure and provide:
+1. A concise human-readable explanation of what went wrong
+2. A specific fix suggestion or next steps
 
-    if (!env.AI) {
-        console.warn("Workers AI binding 'AI' not found. Skipping analysis.");
-        return {
-            humanReadableError: "AI analysis skipped: AI binding not configured.",
-            fixSuggestion: "AI analysis skipped: AI binding not configured."
-        };
+Test: ${testName}
+Error Code: ${errorCode || 'N/A'}
+Error Details: ${rawError || 'N/A'}
+
+Respond in JSON format:
+{
+  "humanReadable": "...",
+  "fixPrompt": "...",
+  "confidence": 0.0-1.0
+}`;
+
+    const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+      prompt,
+      max_tokens: 256
+    });
+
+    // Parse AI response
+    const text = typeof response === 'string' ? response : response.response || '';
+
+    // Try to extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        humanReadable: parsed.humanReadable || 'Failed to analyze error',
+        fixPrompt: parsed.fixPrompt || 'Retry the operation',
+        confidence: parsed.confidence || 0.5
+      };
     }
 
-    // Construct a detailed prompt for the AI model
-    const prompt = `
-        A health test for our system has failed. Your task is to analyze the failure and provide a clear, concise, human-readable explanation and a suggested fix.
+    // Fallback if JSON parsing fails
+    return {
+      humanReadable: text.substring(0, 200),
+      fixPrompt: 'Check logs and retry',
+      confidence: 0.3
+    };
+  } catch (error) {
+    console.error('AI analysis failed:', error);
+    return {
+      humanReadable: 'AI analysis unavailable',
+      fixPrompt: 'Manual investigation required',
+      confidence: 0
+    };
+  }
+}
 
-        **Test Details:**
-        - **Test Name:** ${testDef.name}
-        - **Description:** ${testDef.description}
-        - **Severity:** ${testDef.severity}
+/**
+ * Generate intervention instruction based on policy and event
+ */
+export async function generateIntervention(
+  env: Env,
+  policyName: string,
+  policyDescription: string,
+  eventPayload: any,
+  customPrompt?: string
+): Promise<{ instruction: string; reasoning: string }> {
+  try {
+    const prompt = customPrompt || `You are a code quality assistant for Cursor IDE.
 
-        **Failure Information:**
-        - **Error Code:** ${testResult.error_code || 'N/A'}
-        - **Raw Output/Logs:**
-        \`\`\`json
-        ${testResult.raw}
-        \`\`\`
+Policy: ${policyName}
+Description: ${policyDescription}
+Event Payload: ${JSON.stringify(eventPayload, null, 2)}
 
-        **Instructions:**
-        1.  **Analyze the Failure:** Based on all the provided information, determine the likely root cause of the failure.
-        2.  **Generate Human-Readable Error:** Write a brief, one-sentence description of the problem that a non-technical stakeholder can understand.
-        3.  **Generate Fix Suggestion:** Write a clear, actionable prompt or series of steps that an engineer could use to begin debugging and fixing this issue.
+Provide a concise intervention instruction (1-2 sentences) and brief reasoning.
+Respond in JSON:
+{
+  "instruction": "...",
+  "reasoning": "..."
+}`;
 
-        **Respond in the following JSON format ONLY:**
-        {
-          "human_readable_error": "Your one-sentence summary here.",
-          "fix_suggestion": "Your detailed fix suggestion for an engineer here."
-        }
-    `;
+    const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+      prompt,
+      max_tokens: 200
+    });
 
-    try {
-        const response = await env.AI.run('@cf/meta/llama-2-7b-chat-fp16', {
-            prompt: prompt,
-            stream: false, // We expect a single JSON object
-        });
+    const text = typeof response === 'string' ? response : response.response || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
 
-        // The AI response might be a string containing JSON. We need to parse it.
-        const responseText = typeof response === 'string' ? response : (response as {response: string}).response;
-
-        // Sometimes the model returns markdown with the JSON, so we need to extract it.
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("AI response did not contain a valid JSON object.");
-        }
-
-        const parsed = JSON.parse(jsonMatch[0]);
-
-        return {
-            humanReadableError: parsed.human_readable_error || "AI analysis could not determine the cause.",
-            fixSuggestion: parsed.fix_suggestion || "AI could not generate a fix suggestion."
-        };
-
-    } catch (error: any) {
-        console.error("Error during Workers AI analysis:", error);
-        return {
-            humanReadableError: "Failed to analyze error with AI.",
-            fixSuggestion: `An error occurred during AI analysis: ${error.message}`
-        };
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        instruction: parsed.instruction || 'Review and fix the issue',
+        reasoning: parsed.reasoning || 'Policy violation detected'
+      };
     }
+
+    return {
+      instruction: `${policyName}: ${policyDescription}`,
+      reasoning: 'Automated policy enforcement'
+    };
+  } catch (error) {
+    console.error('Intervention generation failed:', error);
+    return {
+      instruction: `Policy violation: ${policyName}`,
+      reasoning: policyDescription
+    };
+  }
+}
+
+/**
+ * Generate AI suggestions for a Cursor session
+ */
+export async function generateSessionSuggestions(
+  env: Env,
+  recentEvents: any[],
+  policies: any[]
+): Promise<string[]> {
+  try {
+    const prompt = `Based on the following recent Cursor IDE events, provide 3 helpful suggestions to improve code quality or workflow:
+
+Recent Events:
+${JSON.stringify(recentEvents.slice(0, 10), null, 2)}
+
+Active Policies:
+${policies.map(p => `- ${p.name}: ${p.description}`).join('\n')}
+
+Respond with a JSON array of 3 concise suggestions:
+["suggestion 1", "suggestion 2", "suggestion 3"]`;
+
+    const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+      prompt,
+      max_tokens: 300
+    });
+
+    const text = typeof response === 'string' ? response : response.response || '';
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return Array.isArray(parsed) ? parsed.slice(0, 3) : [];
+    }
+
+    return [
+      'Keep error handling consistent',
+      'Add type annotations for better type safety',
+      'Consider adding tests for new functionality'
+    ];
+  } catch (error) {
+    console.error('Suggestion generation failed:', error);
+    return [
+      'Review recent changes for potential issues',
+      'Ensure proper error handling',
+      'Keep code modular and well-documented'
+    ];
+  }
+}
+
+/**
+ * Analyze text sentiment or classification
+ */
+export async function analyzeText(
+  env: Env,
+  text: string,
+  model = '@cf/meta/llama-3-8b-instruct'
+): Promise<any> {
+  try {
+    const response = await env.AI.run(model, {
+      prompt: `Analyze the following text and provide insights:\n\n${text}`,
+      max_tokens: 512
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Text analysis failed:', error);
+    throw new Error('AI analysis failed');
+  }
 }

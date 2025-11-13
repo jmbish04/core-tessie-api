@@ -1,98 +1,201 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import * as S from "./schemas/apiSchemas";
-import { dispatchRPC, RpcRegistry } from "./rpc";
-import { runAllTests } from "./tests/runner";
-import { getLatestSession, getSessionById, listActiveTests } from "./utils/db";
-import type { Env } from "../types";
-import { z } from "zod";
+/**
+ * Main API router
+ */
+import { Hono } from 'hono';
+import type { Env } from './types';
+import { runTests, getTestSession } from './tests/runner';
+import { DBHelpers, generateUUID } from './utils/db';
+import { analyzeText } from './utils/ai';
+import {
+  RunTestsRequestSchema,
+  CreateTaskRequestSchema,
+  AnalyzeRequestSchema
+} from './schemas/apiSchemas';
 
-export function buildRouter() {
-  const app = new Hono<{ Bindings: Env }>();
+export const apiRouter = new Hono<{ Bindings: Env }>();
 
-  // ============== MIDDLEWARE ==============
-  app.use("/api/*", cors());
+/**
+ * GET /api/health
+ * System health check
+ */
+apiRouter.get('/health', async (c) => {
+  const db = new DBHelpers(c.env);
 
-  app.onError((err, c) => {
-    console.error(`${c.req.method} ${c.req.url}`, err);
-    if (err instanceof z.ZodError) {
-      return c.json(S.ErrorResponse.parse({ success: false, error: "Validation failed", details: err.issues }), 400);
-    }
-    return c.json(S.ErrorResponse.parse({ success: false, error: "Internal Server Error", details: err.message }), 500);
-  });
+  try {
+    // Quick health checks
+    const testsExist = await db.getActiveTests();
+    const dbHealthy = testsExist.length >= 0;
 
-  // ============== CORE BUSINESS API ==============
-  app.get("/", (c) => c.json({ ok: true, ts: new Date().toISOString(), version: "1.0.0" }));
-
-  app.post("/api/tasks", async (c) => {
-    const body = await c.req.json();
-    const res = await dispatchRPC("createTask", body, c.env, c.executionCtx);
-    return c.json(res);
-  });
-
-  app.get("/api/tasks", async (c) => {
-    const res = await dispatchRPC("listTasks", undefined, c.env, c.executionCtx);
-    return c.json(res);
-  });
-
-  app.post("/api/analyze", async (c) => {
-    const body = await c.req.json();
-    const res = await dispatchRPC("runAnalysis", body, c.env, c.executionCtx);
-    return c.json(res);
-  });
-
-  // ============== HEALTH & TESTING API ==============
-  app.get("/api/health", async (c) => {
-    const latestSession = await getLatestSession(c.env);
-    const isHealthy = latestSession.results.length > 0 && latestSession.results.every(r => r.status === 'pass');
-    return c.json({
-        healthy: isHealthy,
-        last_test_session: latestSession.session_uuid,
-        timestamp: new Date().toISOString()
-    });
-  });
-
-  app.post("/api/tests/run", async (c) => {
-    const sessionId = crypto.randomUUID();
-    // Run tests in the background without blocking the request
-    c.executionCtx.waitUntil(runAllTests(c.env, sessionId));
-    return c.json({
-        message: "Test session started.",
-        session_uuid: sessionId
-    }, 202);
-  });
-
-  app.get("/api/tests/session/:id", async (c) => {
-    const { id } = c.req.param();
-    if (!id) return c.json({ error: "Session ID is required" }, 400);
-
-    const session = await getSessionById(c.env, id);
-    return c.json(session);
-  });
-
-  app.get("/api/tests/defs", async (c) => {
-    const defs = await listActiveTests(c.env);
-    return c.json({ defs });
-  });
-
-  app.get("/api/tests/latest", async (c) => {
-    const latestSession = await getLatestSession(c.env);
-    return c.json(latestSession);
-  });
-
-  // ============== CONVENIENCE ENDPOINTS ==============
-  app.post("/rpc", async (c) => {
-    const { method, params } = await c.req.json() as { method: keyof RpcRegistry, params: any };
-    if (!method) {
-      return c.json({ success: false, error: "Missing 'method' in request body" }, 400);
-    }
+    let aiHealthy = false;
     try {
-      const result = await dispatchRPC(method, params, c.env, c.executionCtx);
-      return c.json({ success: true, result });
-    } catch (e: any) {
-      return c.json({ success: false, error: e?.message ?? "RPC error" }, 400);
+      await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+        prompt: 'OK',
+        max_tokens: 1
+      });
+      aiHealthy = true;
+    } catch (e) {
+      aiHealthy = false;
     }
-  });
 
-  return app;
-}
+    let doHealthy = false;
+    try {
+      const id = c.env.ROOM_DO.idFromName('health-check');
+      const stub = c.env.ROOM_DO.get(id);
+      const response = await stub.fetch('https://fake/stats');
+      doHealthy = response.ok;
+    } catch (e) {
+      doHealthy = false;
+    }
+
+    const allHealthy = dbHealthy && aiHealthy && doHealthy;
+    const status = allHealthy ? 'healthy' : 'degraded';
+
+    // Get recent test metrics
+    const recentTests = await db.getTestResultsBySession('latest');
+    const passRate = recentTests.length > 0
+      ? recentTests.filter(t => t.status === 'pass').length / recentTests.length
+      : 0;
+
+    return c.json({
+      status,
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: dbHealthy,
+        ai: aiHealthy,
+        durableObjects: doHealthy
+      },
+      metrics: {
+        activeTests: testsExist.length,
+        lastTestRun: recentTests[0]?.started_at || null,
+        passRate
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: false,
+        ai: false,
+        durableObjects: false
+      },
+      error: String(error)
+    }, 500);
+  }
+});
+
+/**
+ * POST /api/tests/run
+ * Execute health tests
+ */
+apiRouter.post('/tests/run', async (c) => {
+  try {
+    const body = await c.req.json();
+    const validated = RunTestsRequestSchema.parse(body);
+
+    if (validated.async) {
+      const sessionId = generateUUID();
+
+      // Run tests in background
+      c.executionCtx.waitUntil(runTests(c.env, { sessionId, testIds: validated.testIds }));
+
+      return c.json({
+        sessionId,
+        status: 'running',
+        testsScheduled: validated.testIds?.length || 0
+      });
+    } else {
+      const result = await runTests(c.env, { testIds: validated.testIds });
+
+      return c.json({
+        sessionId: result.sessionId,
+        status: 'completed',
+        testsScheduled: result.summary.total,
+        results: result.results,
+        summary: result.summary
+      });
+    }
+  } catch (error) {
+    return c.json({ error: 'Invalid request', details: String(error) }, 400);
+  }
+});
+
+/**
+ * GET /api/tests/session/:sessionId
+ * Get test session results
+ */
+apiRouter.get('/tests/session/:sessionId', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId');
+    const result = await getTestSession(c.env, sessionId);
+
+    if (!result) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    return c.json({
+      sessionId: result.sessionId,
+      startedAt: result.results[0]?.started_at || null,
+      finishedAt: result.results[result.results.length - 1]?.finished_at || null,
+      results: result.results.map(r => ({
+        id: r.id,
+        testName: r.test_fk,
+        status: r.status,
+        duration: r.duration_ms,
+        errorCode: r.error_code,
+        aiSuggestion: r.ai_prompt_to_fix_error
+      }))
+    });
+  } catch (error) {
+    return c.json({ error: 'Invalid request', details: String(error) }, 400);
+  }
+});
+
+/**
+ * POST /api/tasks (example business API)
+ * Create a new task
+ */
+apiRouter.post('/tasks', async (c) => {
+  try {
+    const body = await c.req.json();
+    const validated = CreateTaskRequestSchema.parse(body);
+
+    const task = {
+      id: `task-${generateUUID()}`,
+      title: validated.title,
+      description: validated.description || '',
+      status: 'pending' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    return c.json(task, 201);
+  } catch (error) {
+    return c.json({ error: 'Invalid request', details: String(error) }, 400);
+  }
+});
+
+/**
+ * POST /api/analyze
+ * Analyze text with Workers AI
+ */
+apiRouter.post('/analyze', async (c) => {
+  try {
+    const body = await c.req.json();
+    const validated = AnalyzeRequestSchema.parse(body);
+
+    const result = await analyzeText(
+      c.env,
+      validated.text,
+      validated.model
+    );
+
+    return c.json({
+      result,
+      model: validated.model || '@cf/meta/llama-3-8b-instruct',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    return c.json({ error: 'Analysis failed', details: String(error) }, 500);
+  }
+});

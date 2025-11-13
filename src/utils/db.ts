@@ -1,160 +1,205 @@
-import { drizzle } from 'drizzle-orm/d1';
+/**
+ * D1 Database utilities with Kysely query builder
+ */
 import { Kysely } from 'kysely';
 import { D1Dialect } from 'kysely-d1';
-import { text, integer, sqliteTable } from 'drizzle-orm/sqlite-core';
-import type { Env } from '../types';
-import type { Insertable, Selectable } from 'kysely';
+import type { Env, TestDef, TestResult, CursorSession, CursorEvent, CursorIntervention, CursorPolicy } from '../types';
 
-// ======= DRIZZLE SCHEMA (for migrations and type generation) =======
-export const test_defs = sqliteTable('test_defs', {
-    id: text('id').primaryKey(),
-    name: text('name').notNull(),
-    description: text('description').notNull(),
-    category: text('category'),
-    severity: text('severity'),
-    is_active: integer('is_active').notNull().default(1),
-    error_map: text('error_map'), // JSON string
-    created_at: text('created_at').notNull(),
-});
-
-export const test_results = sqliteTable('test_results', {
-    id: text('id').primaryKey(),
-    session_uuid: text('session_uuid').notNull(),
-    test_fk: text('test_fk').notNull().references(() => test_defs.id),
-    started_at: text('started_at').notNull(),
-    finished_at: text('finished_at'),
-    duration_ms: integer('duration_ms'),
-    status: text('status', { enum: ['pass', 'fail'] }).notNull(),
-    error_code: text('error_code'),
-    raw: text('raw'), // JSON
-    ai_human_readable_error_description: text('ai_human_readable_error_description'),
-    ai_prompt_to_fix_error: text('ai_prompt_to_fix_error'),
-    created_at: text('created_at').notNull(),
-});
-
-export const tasks = sqliteTable('tasks', {
-    id: text('id').primaryKey(),
-    title: text('title').notNull(),
-    status: text('status', { enum: ['pending', 'running', 'done'] }).notNull().default('pending'),
-    created_at: text('created_at').notNull(),
-});
-
-
-// ======= KYSELY TYPES (for query builder ergonomics) =======
-export type TestDef = Selectable<Database['test_defs']>;
-export type NewTestDef = Insertable<Database['test_defs']>;
-
-export type TestResult = Selectable<Database['test_results']>;
-export type NewTestResult = Insertable<Database['test_results']>;
-
-export type Task = Selectable<Database['tasks']>;
-export type NewTask = Insertable<Database['tasks']>;
-
-
-interface Database {
-    test_defs: TestDef;
-    test_results: TestResult;
-    tasks: Task;
+// Database schema interface for Kysely
+export interface Database {
+  test_defs: TestDef;
+  test_results: TestResult;
+  cursor_sessions: CursorSession;
+  cursor_events: CursorEvent;
+  cursor_interventions: CursorIntervention;
+  cursor_policies: CursorPolicy;
 }
 
-// ======= CLIENT INSTANTIATION =======
 /**
- * Provides a Drizzle ORM client for interacting with the D1 database.
- * Recommended for schema-related operations and simple queries.
+ * Create a Kysely instance for D1
  */
-export const getDrizzleClient = (env: Env) => drizzle(env.DB, { schema: { test_defs, test_results, tasks } });
-
-/**
- * Provides a Kysely query builder client for interacting with the D1 database.
- * Recommended for complex queries and ergonomic data access.
- */
-export const getKyselyClient = (env: Env) => new Kysely<Database>({ dialect: new D1Dialect({ database: env.DB }) });
-
-
-// ======= HELPER FUNCTIONS (using Kysely) =======
+export function createDB(d1: D1Database): Kysely<Database> {
+  return new Kysely<Database>({
+    dialect: new D1Dialect({ database: d1 })
+  });
+}
 
 /**
- * Lists all active test definitions from the database.
+ * Generate a UUID v4
  */
-export const listActiveTests = async (env: Env): Promise<TestDef[]> => {
-    const db = getKyselyClient(env);
-    return await db
-        .selectFrom('test_defs')
-        .selectAll()
-        .where('is_active', '=', 1)
-        .orderBy('name', 'asc')
-        .execute();
-};
+export function generateUUID(): string {
+  return crypto.randomUUID();
+}
 
 /**
- * Inserts a new test result into the database.
+ * Get current ISO timestamp
  */
-export const insertTestResult = async (env: Env, result: NewTestResult): Promise<TestResult> => {
-    const db = getKyselyClient(env);
-    return await db
-        .insertInto('test_results')
-        .values(result)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-};
+export function now(): string {
+  return new Date().toISOString();
+}
 
 /**
- * Retrieves all test results for a given session UUID.
+ * Query builder helpers
  */
-export const getSessionById = async (env: Env, sessionId: string) => {
-    const db = getKyselyClient(env);
-    const results = await db
-        .selectFrom('test_results')
-        .where('session_uuid', '=', sessionId)
-        .innerJoin('test_defs', 'test_results.test_fk', 'test_defs.id')
-        .select([
-            'test_results.id', 'test_results.session_uuid', 'test_results.test_fk',
-            'test_results.started_at', 'test_results.finished_at', 'test_results.duration_ms',
-            'test_results.status', 'test_results.error_code', 'test_results.raw',
-            'test_results.ai_human_readable_error_description', 'test_results.ai_prompt_to_fix_error',
-            'test_defs.name', 'test_defs.description'
-        ])
-        .orderBy('test_results.started_at', 'asc')
-        .execute();
+export class DBHelpers {
+  private db: Kysely<Database>;
 
-    // Shape the data to nest test_def info for easier frontend consumption
-    const shapedResults = results.map(r => ({
-        id: r.id,
-        session_uuid: r.session_uuid,
-        test_fk: r.test_fk,
-        started_at: r.started_at,
-        finished_at: r.finished_at,
-        duration_ms: r.duration_ms,
-        status: r.status,
-        error_code: r.error_code,
-        raw: r.raw,
-        ai_human_readable_error_description: r.ai_human_readable_error_description,
-        ai_prompt_to_fix_error: r.ai_prompt_to_fix_error,
-        test_def: {
-            name: r.name,
-            description: r.description
-        }
-    }));
+  constructor(env: Env) {
+    this.db = createDB(env.DB);
+  }
 
-    return { session_uuid: sessionId, results: shapedResults };
-};
+  // Test Definitions
+  async getActiveTests(): Promise<TestDef[]> {
+    return await this.db
+      .selectFrom('test_defs')
+      .selectAll()
+      .where('is_active', '=', 1)
+      .execute();
+  }
 
-/**
- * Retrieves the most recent test session from the database.
- */
-export const getLatestSession = async (env: Env) => {
-    const db = getKyselyClient(env);
+  async getTestDef(id: string): Promise<TestDef | undefined> {
+    return await this.db
+      .selectFrom('test_defs')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst();
+  }
 
-    const latestSessionInfo = await db
-        .selectFrom('test_results')
-        .select('session_uuid')
-        .orderBy('created_at', 'desc')
-        .limit(1)
-        .executeTakeFirst();
+  // Test Results
+  async createTestResult(result: Omit<TestResult, 'created_at'>): Promise<void> {
+    await this.db
+      .insertInto('test_results')
+      .values({ ...result, created_at: now() })
+      .execute();
+  }
 
-    if (!latestSessionInfo) {
-        return { session_uuid: null, results: [] };
+  async getTestResultsBySession(sessionUUID: string): Promise<TestResult[]> {
+    return await this.db
+      .selectFrom('test_results')
+      .selectAll()
+      .where('session_uuid', '=', sessionUUID)
+      .orderBy('started_at', 'asc')
+      .execute();
+  }
+
+  async updateTestResult(id: string, updates: Partial<TestResult>): Promise<void> {
+    await this.db
+      .updateTable('test_results')
+      .set(updates)
+      .where('id', '=', id)
+      .execute();
+  }
+
+  // Cursor Sessions
+  async createSession(session: Omit<CursorSession, 'id'>): Promise<string> {
+    const id = generateUUID();
+    await this.db
+      .insertInto('cursor_sessions')
+      .values({ id, ...session })
+      .execute();
+    return id;
+  }
+
+  async getSession(id: string): Promise<CursorSession | undefined> {
+    return await this.db
+      .selectFrom('cursor_sessions')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst();
+  }
+
+  async updateSession(id: string, updates: Partial<CursorSession>): Promise<void> {
+    await this.db
+      .updateTable('cursor_sessions')
+      .set(updates)
+      .where('id', '=', id)
+      .execute();
+  }
+
+  async listSessions(filters: {
+    status?: string;
+    project?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<CursorSession[]> {
+    let query = this.db.selectFrom('cursor_sessions').selectAll();
+
+    if (filters.status) {
+      query = query.where('status', '=', filters.status as any);
+    }
+    if (filters.project) {
+      query = query.where('project', '=', filters.project);
     }
 
-    return getSessionById(env, latestSessionInfo.session_uuid);
-};
+    query = query
+      .orderBy('last_seen_at', 'desc')
+      .limit(filters.limit ?? 50)
+      .offset(filters.offset ?? 0);
+
+    return await query.execute();
+  }
+
+  // Cursor Events
+  async createEvent(event: Omit<CursorEvent, 'id'>): Promise<string> {
+    const id = generateUUID();
+    await this.db
+      .insertInto('cursor_events')
+      .values({ id, ...event })
+      .execute();
+    return id;
+  }
+
+  async getEventsBySession(sessionId: string, limit = 100): Promise<CursorEvent[]> {
+    return await this.db
+      .selectFrom('cursor_events')
+      .selectAll()
+      .where('session_fk', '=', sessionId)
+      .orderBy('ts', 'desc')
+      .limit(limit)
+      .execute();
+  }
+
+  // Cursor Interventions
+  async createIntervention(intervention: Omit<CursorIntervention, 'id'>): Promise<string> {
+    const id = generateUUID();
+    await this.db
+      .insertInto('cursor_interventions')
+      .values({ id, ...intervention })
+      .execute();
+    return id;
+  }
+
+  async getInterventionsBySession(sessionId: string): Promise<CursorIntervention[]> {
+    return await this.db
+      .selectFrom('cursor_interventions')
+      .selectAll()
+      .where('session_fk', '=', sessionId)
+      .orderBy('fired_at', 'desc')
+      .execute();
+  }
+
+  async updateIntervention(id: string, updates: Partial<CursorIntervention>): Promise<void> {
+    await this.db
+      .updateTable('cursor_interventions')
+      .set(updates)
+      .where('id', '=', id)
+      .execute();
+  }
+
+  // Cursor Policies
+  async getActivePolicies(): Promise<CursorPolicy[]> {
+    return await this.db
+      .selectFrom('cursor_policies')
+      .selectAll()
+      .where('is_active', '=', 1)
+      .execute();
+  }
+
+  async getPolicy(id: string): Promise<CursorPolicy | undefined> {
+    return await this.db
+      .selectFrom('cursor_policies')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst();
+  }
+}

@@ -5,6 +5,13 @@ compatibility_date = "2024-05-12"
 compatibility_flags = ["python_workers"]
 workers_dev = true
 
+# 📁 Assets Binding
+# Serves static files (HTML, CSS, JS) from the public directory
+# These files are served for free without invoking the Worker
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
 # 🔐 Secrets
 # Define via: wrangler secret put TESSIE_API_KEY
 #             wrangler secret put JWT_SECRET

@@ -1,128 +1,190 @@
-import { listActiveTests, insertTestResult, getKyselyClient } from '../utils/db';
+/**
+ * Test orchestrator for health checks and diagnostics
+ */
+import type { Env, TestResult } from '../types';
+import { DBHelpers, generateUUID, now } from '../utils/db';
 import { analyzeTestFailure } from '../utils/ai';
-import { getDefaultTestDefs } from './defs';
-import type { Env } from '../types';
-import type { TestDef } from '../utils/db';
+import { getTestExecutor } from './defs';
 
-type TestOutcome = {
-    status: 'pass' | 'fail';
-    raw: string; // JSON string of raw output/error
-    error_code?: string;
-};
-
-// =================================================================
-// Test Execution Logic
-// =================================================================
-
-// Simulates running a single, specific test.
-async function executeTest(test: TestDef, env: Env): Promise<TestOutcome> {
-    const url = `http://localhost:${env.PORT || 8787}`;
-
-    try {
-        switch (test.name) {
-            case 'API Health Check': {
-                const response = await fetch(`${url}/`);
-                if (response.status !== 200) {
-                    throw new Error(`Health check failed with status: ${response.status}`);
-                }
-                const data = await response.json();
-                return { status: 'pass', raw: JSON.stringify(data) };
-            }
-            case 'OpenAPI Spec Availability': {
-                const response = await fetch(`${url}/openapi.json`);
-                if (response.status !== 200) {
-                    throw new Error(`OpenAPI spec fetch failed with status: ${response.status}`);
-                }
-                const data = await response.json();
-                if (!data || typeof data.openapi !== 'string') {
-                    return { status: 'fail', raw: JSON.stringify({ error: "Invalid or missing 'openapi' key" }), error_code: 'MISSING_KEY' };
-                }
-                return { status: 'pass', raw: JSON.stringify({ openapiVersion: data.openapi }) };
-            }
-            case 'External Service Check (Simulated Failure)': {
-                 // This is designed to always fail to test the AI analysis.
-                await fetch('https://non-existent-service.dev');
-                // Should not be reached
-                return { status: 'pass', raw: '{}' };
-            }
-            default:
-                return { status: 'fail', raw: JSON.stringify({ error: "Unknown test definition" }), error_code: 'UNKNOWN_TEST' };
-        }
-    } catch (e: any) {
-        return { status: 'fail', raw: JSON.stringify({ error: e.message, stack: e.stack }), error_code: 'FETCH_FAILED' };
-    }
+export interface TestRunOptions {
+  testIds?: string[];
+  sessionId?: string;
 }
 
-
-// =================================================================
-// Test Orchestration
-// =================================================================
-
-/**
- * Ensures that the default test definitions are present in the database.
- * If the table is empty, it seeds it with the defaults.
- */
-async function ensureTestDefs(env: Env) {
-    const db = getKyselyClient(env);
-
-    const countResult = await db.selectFrom('test_defs').select(eb => eb.fn.countAll().as('count')).executeTakeFirst();
-    const count = Number(countResult?.count ?? 0);
-
-    if (count === 0) {
-        console.log("Seeding database with default test definitions...");
-        await db.insertInto('test_defs').values(getDefaultTestDefs()).execute();
-    }
+export interface TestRunResult {
+  sessionId: string;
+  results: TestResult[];
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    duration: number;
+  };
 }
 
 /**
- * Runs all active tests, records their results, and triggers AI analysis for failures.
- * This is the main function called by the cron trigger and the on-demand API.
+ * Run health tests
  */
-export async function runAllTests(env: Env, session_uuid?: string) {
-    const sessionId = session_uuid || crypto.randomUUID();
+export async function runTests(env: Env, options: TestRunOptions = {}): Promise<TestRunResult> {
+  const db = new DBHelpers(env);
+  const sessionId = options.sessionId || generateUUID();
+  const startTime = Date.now();
 
-    // Ensure tests are seeded before running
-    await ensureTestDefs(env);
+  // Get tests to run
+  let testsToRun;
+  if (options.testIds && options.testIds.length > 0) {
+    testsToRun = await Promise.all(
+      options.testIds.map(id => db.getTestDef(id))
+    );
+    testsToRun = testsToRun.filter(t => t !== undefined);
+  } else {
+    testsToRun = await db.getActiveTests();
+  }
 
-    const activeTests = await listActiveTests(env);
+  const results: TestResult[] = [];
+  let passed = 0;
+  let failed = 0;
 
-    const testPromises = activeTests.map(async (test) => {
-        const started_at = new Date().toISOString();
-        const startTime = Date.now();
+  // Execute tests
+  for (const testDef of testsToRun) {
+    if (!testDef) continue;
 
-        const outcome = await executeTest(test, env);
+    const testStart = Date.now();
+    const executor = getTestExecutor(testDef.id);
 
-        const finished_at = new Date().toISOString();
-        const duration_ms = Date.now() - startTime;
+    let status: 'pass' | 'fail' = 'fail';
+    let errorCode: string | null = null;
+    let rawError: string | null = null;
+    let aiDescription: string | null = null;
+    let aiFixPrompt: string | null = null;
 
-        let resultToInsert = {
-            id: crypto.randomUUID(),
-            session_uuid: sessionId,
-            test_fk: test.id,
-            started_at,
-            finished_at,
-            duration_ms,
-            status: outcome.status,
-            error_code: outcome.error_code,
-            raw: outcome.raw,
-            created_at: new Date().toISOString()
-        };
+    if (executor) {
+      try {
+        const result = await executor.execute(env);
+        status = result.success ? 'pass' : 'fail';
 
-        // If the test failed, run AI analysis
-        if (outcome.status === 'fail') {
-            const { humanReadableError, fixSuggestion } = await analyzeTestFailure(env, test, resultToInsert);
-            // @ts-ignore
-            resultToInsert.ai_human_readable_error_description = humanReadableError;
-            // @ts-ignore
-            resultToInsert.ai_prompt_to_fix_error = fixSuggestion;
+        if (!result.success) {
+          errorCode = 'TEST_FAILED';
+          rawError = result.error || 'Test execution failed';
+
+          // Get AI analysis
+          const analysis = await analyzeTestFailure(
+            env,
+            testDef.name,
+            errorCode,
+            rawError
+          );
+          aiDescription = analysis.humanReadable;
+          aiFixPrompt = analysis.fixPrompt;
+
+          failed++;
+        } else {
+          passed++;
         }
+      } catch (error) {
+        status = 'fail';
+        errorCode = 'EXCEPTION';
+        rawError = String(error);
+        failed++;
 
-        await insertTestResult(env, resultToInsert);
-    });
+        // Get AI analysis
+        const analysis = await analyzeTestFailure(
+          env,
+          testDef.name,
+          errorCode,
+          rawError
+        );
+        aiDescription = analysis.humanReadable;
+        aiFixPrompt = analysis.fixPrompt;
+      }
+    } else {
+      errorCode = 'NO_EXECUTOR';
+      rawError = 'Test executor not found';
+      failed++;
+    }
 
-    // We use `allSettled` to ensure all tests complete, even if some fail.
-    await Promise.allSettled(testPromises);
+    const testEnd = Date.now();
+    const duration = testEnd - testStart;
 
-    console.log(`Test session ${sessionId} completed.`);
-    return sessionId;
+    const testResult: TestResult = {
+      id: generateUUID(),
+      session_uuid: sessionId,
+      test_fk: testDef.id,
+      started_at: new Date(testStart).toISOString(),
+      finished_at: new Date(testEnd).toISOString(),
+      duration_ms: duration,
+      status,
+      error_code: errorCode,
+      raw: rawError,
+      ai_human_readable_error_description: aiDescription,
+      ai_prompt_to_fix_error: aiFixPrompt,
+      created_at: now()
+    };
+
+    // Save to D1
+    await db.createTestResult(testResult);
+    results.push(testResult);
+  }
+
+  const endTime = Date.now();
+
+  return {
+    sessionId,
+    results,
+    summary: {
+      total: testsToRun.length,
+      passed,
+      failed,
+      duration: endTime - startTime
+    }
+  };
+}
+
+/**
+ * Get test session results
+ */
+export async function getTestSession(env: Env, sessionId: string): Promise<TestRunResult | null> {
+  const db = new DBHelpers(env);
+  const results = await db.getTestResultsBySession(sessionId);
+
+  if (results.length === 0) {
+    return null;
+  }
+
+  const passed = results.filter(r => r.status === 'pass').length;
+  const failed = results.filter(r => r.status === 'fail').length;
+
+  const startTimes = results.map(r => new Date(r.started_at).getTime());
+  const endTimes = results.map(r => r.finished_at ? new Date(r.finished_at).getTime() : Date.now());
+
+  const duration = Math.max(...endTimes) - Math.min(...startTimes);
+
+  return {
+    sessionId,
+    results,
+    summary: {
+      total: results.length,
+      passed,
+      failed,
+      duration
+    }
+  };
+}
+
+/**
+ * Cron handler for scheduled health checks
+ */
+export async function cronHealthCheck(env: Env): Promise<void> {
+  console.log('Running scheduled health check...');
+  const result = await runTests(env);
+  console.log('Health check complete:', result.summary);
+
+  // TODO: Send alerts if critical tests fail
+  const criticalFailures = result.results.filter(
+    r => r.status === 'fail' && (r.error_code === 'CRITICAL' || r.test_fk.includes('critical'))
+  );
+
+  if (criticalFailures.length > 0) {
+    console.error('ALERT: Critical health check failures:', criticalFailures);
+  }
 }
